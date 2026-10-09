@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ScheduleSlot } from '../types';
+import { exportScheduleToExcel, parseExcelToSchedules } from '../utils/excelHelper';
 
 interface JadwalViewProps {
   schedules: ScheduleSlot[];
@@ -8,6 +9,8 @@ interface JadwalViewProps {
   onDeleteSlot: (id: string, subject: string) => void;
   onPrint: () => void;
   onOpenAbsensiKelas: (slot: ScheduleSlot) => void;
+  userRole?: 'siswa' | 'guru' | 'admin' | 'superadmin';
+  onImportSchedules?: (newSchedules: ScheduleSlot[]) => void;
 }
 
 export const JadwalView: React.FC<JadwalViewProps> = ({
@@ -17,10 +20,13 @@ export const JadwalView: React.FC<JadwalViewProps> = ({
   onDeleteSlot,
   onPrint,
   onOpenAbsensiKelas,
+  userRole = 'siswa',
+  onImportSchedules,
 }) => {
   const [selectedClass, setSelectedClass] = useState('XII TKJ 1');
   const [selectedDay, setSelectedDay] = useState<'Senin' | 'Selasa' | 'Rabu' | 'Kamis' | 'Jumat' | 'Sabtu'>('Selasa');
   const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const days: ('Senin' | 'Selasa' | 'Rabu' | 'Kamis' | 'Jumat' | 'Sabtu')[] = [
     'Senin',
@@ -35,9 +41,38 @@ export const JadwalView: React.FC<JadwalViewProps> = ({
     (s) => !s.day || s.day === selectedDay
   );
 
+  const isAdminOrSuper = userRole === 'admin' || userRole === 'superadmin';
+  const isGuru = userRole === 'guru';
+
+  const handleExportExcel = () => {
+    exportScheduleToExcel(schedules, selectedClass);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const imported = await parseExcelToSchedules(file);
+      if (onImportSchedules && imported.length > 0) {
+        onImportSchedules(imported);
+      }
+    } catch (err: any) {
+      alert(`Gagal membaca file Excel: ${err?.message || 'Format tidak valid'}`);
+    }
+  };
+
   return (
     <div className="flex flex-col w-full pb-24">
-      {/* DANA Style Atmospheric Curved Header Extension */}
+      {/* Hidden file input for Excel Import */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept=".xlsx,.xls,.csv"
+        className="hidden"
+      />
+
+      {/* Atmospheric Curved Header */}
       <div className="relative bg-gradient-to-b from-[#00609b] to-[#0761a2] pt-4 pb-14 px-4 rounded-b-[28px] shadow-sm">
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-1.5 text-white">
@@ -74,7 +109,7 @@ export const JadwalView: React.FC<JadwalViewProps> = ({
 
       {/* Main Floating Island Content Area */}
       <div className="px-4 -mt-9 flex flex-col gap-3 pb-8 relative z-10">
-        {/* Filter Selector Card (DANA Floating Module) */}
+        {/* Filter Selector Card */}
         <div className="bg-white rounded-2xl p-3 shadow-md border border-[#eceef0]/70">
           <div className="grid grid-cols-2 gap-2 relative">
             {/* Selector 1: Kelas */}
@@ -179,24 +214,52 @@ export const JadwalView: React.FC<JadwalViewProps> = ({
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <span className="text-[16px] text-[#191c1e] font-bold">
-              Jadwal Aktif Hari Ini
+              Jadwal {selectedDay}
             </span>
             <span className="px-2 py-0.5 rounded-full bg-[#cfe4ff] text-[#001d34] text-[11px] font-bold">
-              4 Sesi (9 JP)
+              {currentDaySchedules.filter((s) => !s.isBreak).length} Sesi
             </span>
           </div>
-          <button
-            type="button"
-            onClick={onPrint}
-            className="text-[#00609b] hover:text-[#0761a2] text-[12px] font-bold flex items-center gap-0.5 transition-colors"
-          >
-            <span className="material-symbols-outlined text-[16px]">print</span>
-            Cetak
-          </button>
+
+          <div className="flex items-center gap-1.5">
+            {/* Operator/Admin Excel Export & Import */}
+            {isAdminOrSuper && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Import Jadwal dari File Excel"
+                  className="text-[#00609b] bg-[#cfe4ff]/50 hover:bg-[#cfe4ff] px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[15px]">upload_file</span>
+                  <span>Import</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportExcel}
+                  title="Export Jadwal ke Excel (.xlsx)"
+                  className="text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[15px]">file_download</span>
+                  <span>Excel</span>
+                </button>
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={onPrint}
+              className="text-[#00609b] hover:text-[#0761a2] text-[12px] font-bold flex items-center gap-0.5 transition-colors"
+            >
+              <span className="material-symbols-outlined text-[16px]">print</span>
+              <span>Cetak</span>
+            </button>
+          </div>
         </div>
 
-        {/* Timetable List Container (DANA elevated multi-slot card) */}
-        <div className="bg-white rounded-2xl shadow-md border border-[#eceef0]/70 p-3 flex flex-col gap-2.5">
+        {/* Timetable List Container */}
+        <div className="bg-white rounded-2xl shadow-md border border-[#eceef0]/70 p-3 grid grid-cols-1 md:grid-cols-2 gap-2.5">
           {currentDaySchedules.map((slot) => {
             // Render Break Divider Card
             if (slot.isBreak) {
@@ -204,7 +267,7 @@ export const JadwalView: React.FC<JadwalViewProps> = ({
               return (
                 <div
                   key={slot.id}
-                  className={`rounded-xl px-3 py-2 flex items-center justify-between shadow-xs ${
+                  className={`col-span-full rounded-xl px-3 py-2 flex items-center justify-between shadow-xs ${
                     isAmber
                       ? 'bg-amber-50 text-amber-950 border border-amber-200/50'
                       : 'bg-emerald-50 text-emerald-950 border border-emerald-200/50'
@@ -275,35 +338,44 @@ export const JadwalView: React.FC<JadwalViewProps> = ({
                     </span>
                   </div>
 
-                  {/* Action Buttons */}
+                  {/* Action Buttons - Role Gated */}
                   <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      aria-label="Absensi Sesi"
-                      title="Buka Absensi Kelas"
-                      onClick={() => onOpenAbsensiKelas(slot)}
-                      className="w-8 h-8 rounded-lg bg-[#00855b]/10 flex items-center justify-center text-[#006947] hover:bg-[#00855b]/20 transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">
-                        fact_check
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Edit Sesi"
-                      onClick={() => onOpenEditModal(slot)}
-                      className="w-8 h-8 rounded-lg bg-[#eceef0] flex items-center justify-center text-[#00609b] hover:bg-[#cfe4ff] hover:text-[#001d34] transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">edit</span>
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Hapus Sesi"
-                      onClick={() => onDeleteSlot(slot.id, slot.subject || '')}
-                      className="w-8 h-8 rounded-lg bg-[#ffdad6]/60 flex items-center justify-center text-[#ba1a1a] hover:bg-[#ffdad6] transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">delete</span>
-                    </button>
+                    {/* Guru can trigger Absensi */}
+                    {(isGuru || isAdminOrSuper) && (
+                      <button
+                        type="button"
+                        aria-label="Absensi Sesi"
+                        title="Buka Absensi Kelas"
+                        onClick={() => onOpenAbsensiKelas(slot)}
+                        className="w-8 h-8 rounded-lg bg-[#00855b]/10 flex items-center justify-center text-[#006947] hover:bg-[#00855b]/20 transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">
+                          fact_check
+                        </span>
+                      </button>
+                    )}
+
+                    {/* Only Admin/Superadmin can Edit & Delete */}
+                    {isAdminOrSuper && (
+                      <>
+                        <button
+                          type="button"
+                          aria-label="Edit Sesi"
+                          onClick={() => onOpenEditModal(slot)}
+                          className="w-8 h-8 rounded-lg bg-[#eceef0] flex items-center justify-center text-[#00609b] hover:bg-[#cfe4ff] hover:text-[#001d34] transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">edit</span>
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Hapus Sesi"
+                          onClick={() => onDeleteSlot(slot.id, slot.subject || '')}
+                          className="w-8 h-8 rounded-lg bg-[#ffdad6]/60 flex items-center justify-center text-[#ba1a1a] hover:bg-[#ffdad6] transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">delete</span>
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -329,31 +401,18 @@ export const JadwalView: React.FC<JadwalViewProps> = ({
           })}
         </div>
 
-        {/* Prominent Action Trigger Button: Tambah Jadwal Baru */}
-        <button
-          type="button"
-          onClick={onOpenAddModal}
-          className="w-full h-[52px] rounded-full bg-gradient-to-r from-[#00609b] to-[#0761a2] text-white text-[14px] font-bold flex items-center justify-center gap-2 shadow-[0_8px_16px_-2px_rgba(0,134,214,0.32)] active:scale-[0.99] transition-transform hover:opacity-95"
-        >
-          <span className="material-symbols-outlined text-[20px]">add_circle</span>
-          Tambah Jadwal Baru
-        </button>
+        {/* Action Trigger Button: Tambah Jadwal Baru (ADMIN & SUPERADMIN ONLY) */}
+        {isAdminOrSuper && (
+          <button
+            type="button"
+            onClick={onOpenAddModal}
+            className="w-full h-[52px] rounded-full bg-gradient-to-r from-[#00609b] to-[#0761a2] text-white text-[14px] font-bold flex items-center justify-center gap-2 shadow-[0_8px_16px_-2px_rgba(0,134,214,0.32)] active:scale-[0.99] transition-transform hover:opacity-95 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[20px]">add_circle</span>
+            Tambah Jadwal Baru
+          </button>
+        )}
 
-        {/* Quick Insights Info Strip */}
-        <div className="bg-[#f2f4f6] rounded-xl p-3 flex items-start gap-2.5 border border-[#eceef0]">
-          <span className="material-symbols-outlined text-[#00609b] text-[20px] shrink-0 mt-0.5">
-            verified_user
-          </span>
-          <div className="text-[#404751]">
-            <p className="text-[12px] font-bold text-[#191c1e]">
-              Validasi Jadwal Otomatis
-            </p>
-            <p className="text-[12px] leading-relaxed">
-              Sistem mendeteksi bentrok ruangan &amp; jam mengajar guru secara real-time di
-              lingkungan SMKN 1 Sorong.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );

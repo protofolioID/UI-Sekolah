@@ -63,7 +63,7 @@ export const AbsensiView: React.FC<AbsensiViewProps> = ({
   }, [students]);
 
   return (
-    <div className="flex-1 w-full max-w-lg mx-auto flex flex-col bg-[#f7f9fb] pb-12">
+    <div className="flex-1 w-full flex flex-col bg-[#f7f9fb] pb-12">
       {/* Sheet Card Container */}
       <div className="bg-white rounded-b-[28px] shadow-sm flex flex-col border-b border-[#eceef0]">
         {/* Sheet Handle */}
@@ -198,7 +198,7 @@ export const AbsensiView: React.FC<AbsensiViewProps> = ({
         </div>
 
         {/* Student Attendance List */}
-        <div className="px-4 py-3 space-y-2.5">
+        <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-2 gap-2.5">
           {filteredStudents.length === 0 ? (
             <div className="p-8 text-center text-[#707882]">
               <span className="material-symbols-outlined text-4xl mb-2 opacity-50">

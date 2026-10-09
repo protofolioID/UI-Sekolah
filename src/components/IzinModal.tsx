@@ -100,7 +100,7 @@ export const IzinModal: React.FC<IzinModalProps> = ({ isOpen, onClose, onSubmit 
               info
             </span>
             <span>
-              Pengajuan akan langsung diteruskan ke Wali Kelas (Budi Santoso, S.Kom) dan Guru Piket SMKN 1 Sorong.
+              Pengajuan akan langsung diteruskan ke Wali Kelas dan Operator SMKN 1 Sorong.
             </span>
           </div>
 

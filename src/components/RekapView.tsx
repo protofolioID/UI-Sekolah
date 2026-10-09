@@ -3,11 +3,13 @@ import React from 'react';
 interface RekapViewProps {
   onBackToBeranda: () => void;
   onDownloadReport: () => void;
+  userRole?: 'siswa' | 'guru' | 'admin' | 'superadmin';
 }
 
 export const RekapView: React.FC<RekapViewProps> = ({
   onBackToBeranda,
   onDownloadReport,
+  userRole = 'siswa',
 }) => {
   const historyItems = [
     {
@@ -15,44 +17,40 @@ export const RekapView: React.FC<RekapViewProps> = ({
       subject: 'Pemodelan Perangkat Lunak (BA)',
       time: '07:10 WIT',
       status: 'Hadir',
-      statusColor: 'tertiary',
     },
     {
       date: 'Senin, 8 Okt 2026',
       subject: 'Administrasi Infrastruktur Jaringan (AIJ)',
       time: '07:08 WIT',
       status: 'Hadir',
-      statusColor: 'tertiary',
     },
     {
       date: 'Jumat, 5 Okt 2026',
       subject: 'Pendidikan Agama & Budi Pekerti',
       time: '07:12 WIT',
       status: 'Hadir',
-      statusColor: 'tertiary',
     },
     {
       date: 'Kamis, 4 Okt 2026',
       subject: 'Pemrograman Berorientasi Objek (PBO)',
       time: '07:05 WIT',
       status: 'Hadir',
-      statusColor: 'tertiary',
     },
     {
       date: 'Rabu, 3 Okt 2026',
       subject: 'Matematika Terapan Kejuruan',
       time: '07:14 WIT',
       status: 'Hadir',
-      statusColor: 'tertiary',
     },
     {
       date: 'Selasa, 2 Okt 2026',
       subject: 'Bahasa Inggris Maritim & Kejuruan',
       time: '07:09 WIT',
       status: 'Hadir',
-      statusColor: 'tertiary',
     },
   ];
+
+  const isAdminOrSuper = userRole === 'admin' || userRole === 'superadmin';
 
   return (
     <div className="flex flex-col w-full pb-28">
@@ -105,7 +103,7 @@ export const RekapView: React.FC<RekapViewProps> = ({
             </div>
           </div>
 
-          {/* 3 Metric Pills */}
+          {/* 4 Metric Pills */}
           <div className="grid grid-cols-4 gap-2 text-center">
             <div className="bg-[#00855b]/10 p-2.5 rounded-2xl">
               <p className="text-[18px] font-bold text-[#006947]">68</p>
@@ -126,7 +124,7 @@ export const RekapView: React.FC<RekapViewProps> = ({
           </div>
         </div>
 
-        {/* Attendance Heatmap / Calendar Month Overview */}
+        {/* Calendar Month Overview */}
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-[#eceef0] flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -147,7 +145,6 @@ export const RekapView: React.FC<RekapViewProps> = ({
                 {d}
               </span>
             ))}
-            {/* Calendar days simulation */}
             {Array.from({ length: 31 }, (_, i) => {
               const day = i + 1;
               const isPast = day <= 9;
@@ -222,15 +219,17 @@ export const RekapView: React.FC<RekapViewProps> = ({
           </div>
         </div>
 
-        {/* Download PDF CTA */}
-        <button
-          type="button"
-          onClick={onDownloadReport}
-          className="w-full h-12 rounded-full bg-[#00609b] text-white text-[13px] font-bold flex items-center justify-center gap-2 shadow-md hover:bg-[#0079c2] active:scale-95 transition-all"
-        >
-          <span className="material-symbols-outlined text-[18px]">download</span>
-          Unduh Laporan Rekap Presensi (PDF)
-        </button>
+        {/* Download PDF CTA - ONLY for Guru/Admin/Superadmin */}
+        {(isAdminOrSuper || userRole === 'guru') && (
+          <button
+            type="button"
+            onClick={onDownloadReport}
+            className="w-full h-12 rounded-full bg-[#00609b] text-white text-[13px] font-bold flex items-center justify-center gap-2 shadow-md hover:bg-[#0079c2] active:scale-95 transition-all cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">download</span>
+            Unduh Laporan Rekap Presensi (PDF)
+          </button>
+        )}
       </div>
     </div>
   );

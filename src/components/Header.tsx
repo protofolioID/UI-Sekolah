@@ -20,7 +20,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <header className="fixed top-0 w-full z-40 bg-[#00609b]/95 text-white backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.06)] pt-safe transition-all">
-      <div className="h-16 px-4 flex items-center justify-between gap-2 max-w-lg mx-auto">
+      <div className="h-16 px-4 flex items-center justify-between gap-2 max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-5xl mx-auto">
         {/* Left: Back button or school branding */}
         <div className="flex items-center gap-2 min-w-0">
           {showBack ? (

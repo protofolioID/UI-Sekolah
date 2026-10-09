@@ -7,7 +7,7 @@ interface BerandaViewProps {
   onNavigateToAbsensi: () => void;
   onOpenIzinModal: () => void;
   onOpenLencanaModal: () => void;
-  onOpenQrScan: () => void;
+  onOpenQrScan?: () => void;
   onOpenNotifications: () => void;
 }
 
@@ -395,20 +395,14 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
               {/* Bottom Session Status Strip */}
               <div className="bg-[#f2f4f6] rounded-xl p-2.5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px] text-[#404751]">
-                    pending
-                  </span>
-                  <span className="text-[12px] text-[#404751]">
-                    Menunggu Guru Membuka Presensi
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  <span className="text-[12px] text-[#404751] font-medium">
+                    Presensi dicatat langsung oleh Guru Mapel di kelas
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={onOpenQrScan}
-                  className="text-[11px] text-[#00609b] font-bold bg-[#cfe4ff]/50 px-2 py-0.5 rounded-md hover:bg-[#cfe4ff] transition-colors active:scale-95"
-                >
-                  Siapkan HP
-                </button>
+                <span className="text-[10px] text-[#00609b] font-bold bg-[#cfe4ff]/60 px-2 py-0.5 rounded-md">
+                  Roll-Call Guru
+                </span>
               </div>
             </div>
 
@@ -446,16 +440,15 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
           </div>
           <div className="flex flex-col min-w-0">
             <span className="text-[12px] text-[#001d34] font-bold">
-              Info Presensi Cerdas
+              Info Presensi Pelajaran
             </span>
             <span className="text-[12px] text-[#004a79] leading-relaxed">
-              Presensi ditutup otomatis 15 menit setelah jam pelajaran dimulai. Pastikan
-              berada dalam radius WiFi sekolah saat melakukan tap QR.
+              Kehadiran per jam pelajaran (JP) dicatat langsung oleh Guru Pengampu mata pelajaran di kelas. Pastikan hadir tepat waktu di ruangan lab atau bengkel.
             </span>
           </div>
         </div>
 
-        {/* Fast Action Card for Teachers & Class Captains to open Absensi Kelas */}
+        {/* Fast Action Card for Teachers to open Absensi Kelas */}
         <div className="bg-white rounded-2xl p-3.5 border border-[#eceef0] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-full bg-[#00609b]/10 text-[#00609b] flex items-center justify-center shrink-0">
@@ -467,8 +460,8 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
               </span>
             </div>
             <div>
-              <p className="text-[12px] font-bold text-[#191c1e]">Mode Guru / Piket Kelas</p>
-              <p className="text-[11px] text-[#404751]">Absensi roll-call & kunci kehadiran</p>
+              <p className="text-[12px] font-bold text-[#191c1e]">Akses Guru Pengampu</p>
+              <p className="text-[11px] text-[#404751]">Absensi roll-call &amp; kunci kehadiran</p>
             </div>
           </div>
           <button

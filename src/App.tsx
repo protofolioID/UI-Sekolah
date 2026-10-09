@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { Header } from './components/Header';
 import { BottomNav, TabType } from './components/BottomNav';
+import { LoginScreen } from './components/LoginScreen';
+import { PublicScheduleView } from './components/PublicScheduleView';
 import { BerandaView } from './components/BerandaView';
 import { JadwalView } from './components/JadwalView';
 import { AbsensiView } from './components/AbsensiView';
 import { RekapView } from './components/RekapView';
 import { ProfilView } from './components/ProfilView';
+import { GuruDashboardView } from './components/GuruDashboardView';
+import { AdminDashboardView } from './components/AdminDashboardView';
 import { ScheduleModal } from './components/ScheduleModal';
 import { AttachmentModal } from './components/AttachmentModal';
 import { QrScanModal } from './components/QrScanModal';
@@ -19,18 +23,31 @@ import {
   NOTIFICATIONS,
 } from './data/mockData';
 import { Student, ScheduleSlot, AttendanceStatus, NotificationItem } from './types';
+import { exportAttendanceRecapToExcel } from './utils/excelHelper';
+
+type UserRole = 'siswa' | 'guru' | 'admin' | 'superadmin';
+
+interface UserSession {
+  username: string;
+  role: UserRole;
+  nama: string;
+}
 
 export default function App() {
-  // Navigation & View State
+  // ─── AUTH STATE ───
+  const [session, setSession] = useState<UserSession | null>(null);
+  const [isPublicSchedule, setIsPublicSchedule] = useState(false);
+
+  // ─── NAV STATE ───
   const [currentTab, setCurrentTab] = useState<TabType>('beranda');
   const [isAbsensiOpen, setIsAbsensiOpen] = useState(false);
 
-  // Core Data State
+  // ─── DATA STATE ───
   const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
   const [schedules, setSchedules] = useState<ScheduleSlot[]>(INITIAL_SCHEDULES);
   const [notifications, setNotifications] = useState<NotificationItem[]>(NOTIFICATIONS);
 
-  // Modals & Panels State
+  // ─── MODALS ───
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [editingSlot, setEditingSlot] = useState<ScheduleSlot | null>(null);
   const [selectedStudentAttachment, setSelectedStudentAttachment] = useState<Student | null>(null);
@@ -40,28 +57,55 @@ export default function App() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
-  // Toast feedback state
+  // ─── TOAST ───
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 2800);
+    setTimeout(() => setToastMessage(null), 2800);
   };
 
-  // Student Attendance Handlers
+  // ─── LOGIN HANDLER ───
+  const handleLogin = (username: string, role?: UserRole) => {
+    const roleMap: Record<string, { role: UserRole; nama: string }> = {
+      's0097658890': { role: 'siswa', nama: 'Cindy Laura' },
+      '196812291993031011': { role: 'guru', nama: 'Budi Santoso, S.Kom' },
+      'admin_demo': { role: 'admin', nama: 'Administrator SMKN 1' },
+      'superadmin_sorong': { role: 'superadmin', nama: 'Superadmin SIAP' },
+    };
+    const match = roleMap[username];
+    const finalRole = role || match?.role || 'siswa';
+    const finalNama = match?.nama || username;
+    setSession({ username, role: finalRole, nama: finalNama });
+    setIsPublicSchedule(false);
+    setCurrentTab('beranda');
+    setIsAbsensiOpen(false);
+    showToast(`Selamat datang, ${finalNama}!`);
+  };
+
+  const handlePublicSchedule = () => {
+    setIsPublicSchedule(true);
+    setSession(null);
+  };
+
+  const handleBackToLogin = () => {
+    setIsPublicSchedule(false);
+  };
+
+  const handleLogout = () => {
+    setSession(null);
+    setIsPublicSchedule(false);
+    setCurrentTab('beranda');
+    setIsAbsensiOpen(false);
+  };
+
+  // ─── ATTENDANCE HANDLERS ───
   const handleUpdateStudentStatus = (id: string, status: AttendanceStatus) => {
-    setStudents((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status } : s))
-    );
+    setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
     showToast(`Status kehadiran siswa diperbarui: ${status}`);
   };
 
   const handleSetAllHadir = () => {
-    setStudents((prev) =>
-      prev.map((s) => ({ ...s, status: 'Hadir' }))
-    );
+    setStudents((prev) => prev.map((s) => ({ ...s, status: 'Hadir' })));
     showToast('Semua 34 siswa berhasil diset HADIR!');
   };
 
@@ -69,7 +113,7 @@ export default function App() {
     showToast('💾 Presensi dikunci & disinkronkan ke SIAP SMKN 1 Sorong!');
   };
 
-  // Schedule CRUD Handlers
+  // ─── SCHEDULE CRUD ───
   const handleOpenAddSchedule = () => {
     setEditingSlot(null);
     setIsScheduleModalOpen(true);
@@ -90,11 +134,7 @@ export default function App() {
   const handleSaveSchedule = (slotData: Partial<ScheduleSlot>) => {
     if (editingSlot) {
       setSchedules((prev) =>
-        prev.map((s) =>
-          s.id === editingSlot.id
-            ? { ...s, ...slotData }
-            : s
-        )
+        prev.map((s) => (s.id === editingSlot.id ? { ...s, ...slotData } : s))
       );
       showToast(`Jadwal "${slotData.subject}" berhasil diperbarui!`);
     } else {
@@ -116,7 +156,12 @@ export default function App() {
     setIsScheduleModalOpen(false);
   };
 
-  // Notifications
+  const handleImportSchedules = (newSchedules: ScheduleSlot[]) => {
+    setSchedules((prev) => [...prev, ...newSchedules]);
+    showToast(`${newSchedules.length} jadwal berhasil diimpor dari file Excel!`);
+  };
+
+  // ─── NOTIFICATIONS ───
   const handleMarkAllNotificationsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     showToast('Semua notifikasi ditandai telah dibaca.');
@@ -124,23 +169,28 @@ export default function App() {
 
   const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
 
-  // Izin Submission
-  const handleIzinSubmit = (type: string, reason: string) => {
+  // ─── IZIN ───
+  const handleIzinSubmit = (type: string, _reason: string) => {
     setIsIzinModalOpen(false);
     showToast(`Pengajuan ${type} berhasil dikirim ke Wali Kelas!`);
   };
 
-  // Title for top app bar
+  // ─── DOWNLOAD RECAP ───
+  const handleDownloadRecapPDF = () => {
+    exportAttendanceRecapToExcel(students, 'XII TKJ 1', 'Oktober 2026');
+    showToast('Rekap presensi berhasil diekspor ke Excel (.xlsx)');
+  };
+
+  // ─── HEADER TITLE ───
   const getHeaderTitle = () => {
-    if (isAbsensiOpen) return 'Scan Presensi';
-    if (currentTab === 'jadwal') return 'Scan Presensi';
+    if (isAbsensiOpen) return 'Lembar Absensi Kelas';
+    if (currentTab === 'jadwal') return 'Jadwal Pelajaran';
     if (currentTab === 'rekap') return 'Rekap Presensi';
-    if (currentTab === 'profil') return 'Profil Siswa';
+    if (currentTab === 'profil') return 'Profil';
     return 'Beranda';
   };
 
   const isBackVisible = isAbsensiOpen || currentTab !== 'beranda';
-
   const handleHeaderBack = () => {
     if (isAbsensiOpen) {
       setIsAbsensiOpen(false);
@@ -149,25 +199,52 @@ export default function App() {
     }
   };
 
-  return (
-    <div className="bg-[#f7f9fb] min-h-screen text-[#191c1e] flex flex-col font-sans selection:bg-[#77b7fe] selection:text-[#00487a]">
-      {/* Top Application Bar */}
-      <Header
-        title={getHeaderTitle()}
-        showBack={isBackVisible}
-        onBack={handleHeaderBack}
-        onNotificationClick={() => setIsNotificationsOpen(true)}
-        onProfileClick={() => {
-          setIsAbsensiOpen(false);
-          setCurrentTab('profil');
-        }}
-        unreadCount={unreadNotificationsCount}
+  // ─── PUBLIC SCHEDULE VIEW ───
+  if (isPublicSchedule) {
+    return (
+      <PublicScheduleView
+        schedules={schedules}
+        onBackToLogin={handleBackToLogin}
+        onPrint={() => setIsPrintModalOpen(true)}
       />
+    );
+  }
 
-      {/* Main View Area */}
-      <main className="flex-1 flex flex-col relative w-full pt-16 max-w-lg mx-auto">
+  // ─── NOT LOGGED IN → SHOW LOGIN ───
+  if (!session) {
+    return (
+      <LoginScreen
+        onLogin={handleLogin}
+        onOpenPublicSchedule={handlePublicSchedule}
+      />
+    );
+  }
+
+  const role = session.role;
+  const isTeacherOrAbove = role === 'guru' || role === 'admin' || role === 'superadmin';
+  const isAdmin = role === 'admin' || role === 'superadmin';
+
+  // ─── MAIN APP ───
+  return (
+    <div className="bg-slate-100 min-h-screen text-[#191c1e] flex flex-col items-center justify-start font-sans selection:bg-[#77b7fe] selection:text-[#00487a]">
+      {/* Shell Container: Full-width on mobile, responsive modern adaptive layout on tablet/desktop */}
+      <div className="w-full max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-5xl min-h-screen bg-[#f7f9fb] shadow-2xl relative flex flex-col transition-all duration-200">
+        {/* Top Application Bar */}
+        <Header
+          title={getHeaderTitle()}
+          showBack={isBackVisible}
+          onBack={handleHeaderBack}
+          onNotificationClick={() => setIsNotificationsOpen(true)}
+          onProfileClick={() => {
+            setIsAbsensiOpen(false);
+            setCurrentTab('profil');
+          }}
+          unreadCount={unreadNotificationsCount}
+        />
+
+        {/* Main View Area */}
+        <main className="flex-1 flex flex-col relative w-full pt-16">
         {isAbsensiOpen ? (
-          // Screen 3: Absensi Kelas (Roll-Call Sheet)
           <AbsensiView
             students={students}
             onUpdateStatus={handleUpdateStudentStatus}
@@ -177,44 +254,64 @@ export default function App() {
             onOpenAttachment={(student) => setSelectedStudentAttachment(student)}
           />
         ) : currentTab === 'beranda' ? (
-          // Screen 1: Beranda (Home)
-          <BerandaView
-            onNavigateToJadwal={() => setCurrentTab('jadwal')}
-            onNavigateToRekap={() => setCurrentTab('rekap')}
-            onNavigateToAbsensi={() => setIsAbsensiOpen(true)}
-            onOpenIzinModal={() => setIsIzinModalOpen(true)}
-            onOpenLencanaModal={() => setIsLencanaModalOpen(true)}
-            onOpenQrScan={() => setIsQrModalOpen(true)}
-            onOpenNotifications={() => setIsNotificationsOpen(true)}
-          />
+          // Role-based home view
+          isAdmin ? (
+            <AdminDashboardView
+              onOpenScheduleManager={handleOpenAddSchedule}
+              onOpenPrintModal={() => setIsPrintModalOpen(true)}
+              onOpenAbsensiKelas={() => setIsAbsensiOpen(true)}
+              onOpenNotifications={() => setIsNotificationsOpen(true)}
+              roleTitle={role === 'superadmin' ? 'Kepala Sekolah / IT Admin' : 'Tata Usaha / Operator'}
+              schedules={schedules}
+              students={students}
+              onImportSchedules={handleImportSchedules}
+            />
+          ) : role === 'guru' ? (
+            <GuruDashboardView
+              onOpenAbsensiKelas={(_classId, _className, _subject) => setIsAbsensiOpen(true)}
+              onNavigateToJadwal={() => setCurrentTab('jadwal')}
+              onNavigateToRekap={() => setCurrentTab('rekap')}
+              onOpenNotifications={() => setIsNotificationsOpen(true)}
+            />
+          ) : (
+            <BerandaView
+              onNavigateToJadwal={() => setCurrentTab('jadwal')}
+              onNavigateToRekap={() => setCurrentTab('rekap')}
+              onNavigateToAbsensi={() => setIsAbsensiOpen(true)}
+              onOpenIzinModal={() => setIsIzinModalOpen(true)}
+              onOpenLencanaModal={() => setIsLencanaModalOpen(true)}
+              onOpenQrScan={() => setIsQrModalOpen(true)}
+              onOpenNotifications={() => setIsNotificationsOpen(true)}
+            />
+          )
         ) : currentTab === 'jadwal' ? (
-          // Screen 2: Jadwal Pelajaran (Detail & Kelola)
           <JadwalView
             schedules={schedules}
             onOpenAddModal={handleOpenAddSchedule}
             onOpenEditModal={handleOpenEditSchedule}
             onDeleteSlot={handleDeleteSchedule}
             onPrint={() => setIsPrintModalOpen(true)}
-            onOpenAbsensiKelas={(slot) => setIsAbsensiOpen(true)}
+            onOpenAbsensiKelas={(_slot) => setIsAbsensiOpen(true)}
+            userRole={role}
+            onImportSchedules={handleImportSchedules}
           />
         ) : currentTab === 'rekap' ? (
-          // Rekapitulasi Presensi
           <RekapView
             onBackToBeranda={() => setCurrentTab('beranda')}
-            onDownloadReport={() => {
-              showToast('Laporan Rekap Presensi Cindy Laura diunduh (PDF)!');
-            }}
+            onDownloadReport={handleDownloadRecapPDF}
+            userRole={role}
           />
         ) : (
-          // Profil Siswa
           <ProfilView
+            session={session}
+            onLogout={handleLogout}
             onOpenLencanaModal={() => setIsLencanaModalOpen(true)}
             onNavigateToAbsensi={() => setIsAbsensiOpen(true)}
           />
         )}
       </main>
 
-      {/* Floating Bottom Navigation Bar (Hidden when roll-call sheet is active for pure focused view) */}
+      {/* Bottom Navigation Bar */}
       {!isAbsensiOpen && (
         <BottomNav
           activeTab={currentTab}
@@ -225,7 +322,20 @@ export default function App() {
         />
       )}
 
-      {/* Modals & Dialogs */}
+        {/* Logout FAB (visible on profil tab) */}
+        {currentTab === 'profil' && (
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="fixed bottom-24 right-4 z-50 w-12 h-12 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-rose-600 active:scale-90 transition-all cursor-pointer"
+            aria-label="Keluar"
+          >
+            <span className="material-symbols-outlined text-[22px]">logout</span>
+          </button>
+        )}
+      </div>
+
+      {/* ─── Modals ─── */}
       <ScheduleModal
         isOpen={isScheduleModalOpen}
         editingSlot={editingSlot}
@@ -270,7 +380,7 @@ export default function App() {
         onClose={() => setIsPrintModalOpen(false)}
       />
 
-      {/* Toast Notification Pill */}
+      {/* Toast */}
       {toastMessage && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#2d3133] text-[#eff1f3] px-4 py-2.5 rounded-full shadow-xl text-[12px] font-semibold flex items-center gap-2 animate-bounceIn border border-white/10">
           <span className="material-symbols-outlined text-[#6ffbbe] text-[18px]">
