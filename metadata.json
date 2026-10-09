@@ -1,0 +1,6 @@
+{
+  "name": "SMKN 1 Sorong - Presensi & Jadwal Siswa",
+  "description": "Aplikasi presensi dan jadwal pelajaran siswa SMKN 1 Sorong dengan sistem absensi cerdas dan pencatatan kehadiran real-time.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
