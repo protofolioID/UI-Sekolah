@@ -143,3 +143,77 @@ export async function parseExcelToSchedules(file: File): Promise<ScheduleSlot[]>
     reader.readAsArrayBuffer(file);
   });
 }
+
+/**
+ * Export student roster to Excel (.xlsx)
+ */
+export function exportStudentsToExcel(students: Student[], className: string = 'XII TKJ 1') {
+  const rows = students.map((s, idx) => ({
+    'No': s.no || idx + 1,
+    'NIS / NISN': s.nis,
+    'Nama Lengkap Siswa': s.name,
+    'Kelas / Rombel': className,
+    'Status Presensi Hari Ini': s.status,
+    'Keterangan / Catatan': s.note || '-',
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  worksheet['!cols'] = [
+    { wch: 6 },
+    { wch: 16 },
+    { wch: 32 },
+    { wch: 16 },
+    { wch: 18 },
+    { wch: 35 },
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, `Siswa_${className.replace(/\s+/g, '_')}`);
+  XLSX.writeFile(workbook, `DATA_SISWA_${className.replace(/\s+/g, '_')}_SMKN1_SORONG.xlsx`);
+}
+
+/**
+ * Parse uploaded Excel file to student list
+ */
+export async function parseExcelToStudents(file: File): Promise<Student[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rawJson: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+        if (!rawJson || rawJson.length === 0) {
+          throw new Error('File Excel siswa kosong atau format tidak sesuai.');
+        }
+
+        const parsedStudents: Student[] = rawJson.map((row, idx) => {
+          const num = idx + 1;
+          const strNum = num < 10 ? `0${num}` : `${num}`;
+          const name = row['Nama Lengkap Siswa'] || row['Nama Siswa'] || row['nama'] || row['Name'] || `Siswa ${num}`;
+          const nis = String(row['NIS / NISN'] || row['NISN'] || row['NIS'] || row['nis'] || `202401${strNum}`);
+          const rawStatus = row['Status Presensi Hari Ini'] || row['Status'] || row['status'] || 'Hadir';
+          const validStatus = ['Hadir', 'Sakit', 'Izin', 'Alfa'].includes(rawStatus) ? rawStatus : 'Hadir';
+
+          return {
+            id: `s-imported-${Date.now()}-${idx}`,
+            no: strNum,
+            name,
+            nis,
+            status: validStatus as any,
+            note: row['Keterangan / Catatan'] || row['Keterangan'] || row['note'] || '',
+          };
+        });
+
+        resolve(parsedStudents);
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsArrayBuffer(file);
+  });
+}

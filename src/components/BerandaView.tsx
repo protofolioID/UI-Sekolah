@@ -1,25 +1,34 @@
 import React from 'react';
 import { ASSETS } from '../data/mockData';
 
+interface UserSession {
+  username: string;
+  role: 'siswa' | 'guru' | 'admin' | 'superadmin';
+  nama: string;
+}
+
 interface BerandaViewProps {
+  session?: UserSession | null;
   onNavigateToJadwal: () => void;
   onNavigateToRekap: () => void;
-  onNavigateToAbsensi: () => void;
   onOpenIzinModal: () => void;
   onOpenLencanaModal: () => void;
-  onOpenQrScan?: () => void;
   onOpenNotifications: () => void;
 }
 
 export const BerandaView: React.FC<BerandaViewProps> = ({
+  session,
   onNavigateToJadwal,
   onNavigateToRekap,
-  onNavigateToAbsensi,
   onOpenIzinModal,
   onOpenLencanaModal,
-  onOpenQrScan,
   onOpenNotifications,
 }) => {
+  const studentName = session?.nama || 'Cindy Laura';
+  const rawId = session?.username || '0068192041';
+  const studentNis = rawId.startsWith('s') ? rawId.slice(1) : rawId;
+  const firstName = studentName.split(' ')[0];
+
   return (
     <div className="flex flex-col w-full relative pb-28">
       {/* Dynamic Curved Blue Header Anchor */}
@@ -34,7 +43,7 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
               <img
                 className="w-12 h-12 rounded-full object-cover shadow-sm ring-2 ring-white/30"
                 src={ASSETS.cindyPortrait}
-                alt="Portrait Cindy Laura"
+                alt={`Portrait ${studentName}`}
               />
               <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#6ffbbe] rounded-full ring-2 ring-[#00609b]" />
             </div>
@@ -42,7 +51,7 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-1">
                 <span className="text-[16px] text-white font-bold truncate">
-                  Hai, Cindy Laura
+                  Hai, {studentName}
                 </span>
                 <span className="text-base select-none">👋</span>
               </div>
@@ -51,7 +60,7 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
                   XII TKJ 1
                 </span>
                 <span className="w-1 h-1 rounded-full bg-[#cfe4ff]/60" />
-                <span className="text-[11px] text-white/80">NISN: 0068192041</span>
+                <span className="text-[11px] text-white/80">NISN: {studentNis}</span>
               </div>
             </div>
           </div>
@@ -164,7 +173,7 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
                     14 HARI DISIPLIN STREAK
                   </span>
                   <span className="text-[12px] text-[#004a79]">
-                    Konsistensi jempolan Cindy!
+                    Konsistensi jempolan {firstName}!
                   </span>
                 </div>
               </div>
@@ -446,31 +455,6 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
               Kehadiran per jam pelajaran (JP) dicatat langsung oleh Guru Pengampu mata pelajaran di kelas. Pastikan hadir tepat waktu di ruangan lab atau bengkel.
             </span>
           </div>
-        </div>
-
-        {/* Fast Action Card for Teachers to open Absensi Kelas */}
-        <div className="bg-white rounded-2xl p-3.5 border border-[#eceef0] flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-full bg-[#00609b]/10 text-[#00609b] flex items-center justify-center shrink-0">
-              <span
-                className="material-symbols-outlined text-[20px]"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                fact_check
-              </span>
-            </div>
-            <div>
-              <p className="text-[12px] font-bold text-[#191c1e]">Akses Guru Pengampu</p>
-              <p className="text-[11px] text-[#404751]">Absensi roll-call &amp; kunci kehadiran</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onNavigateToAbsensi}
-            className="px-3 py-1.5 rounded-full bg-[#00609b] text-white text-[11px] font-bold shadow-xs active:scale-95 transition-all"
-          >
-            Buka Absensi
-          </button>
         </div>
       </div>
     </div>

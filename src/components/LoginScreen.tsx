@@ -46,8 +46,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         if (results && results.length > 0) {
           const profile = results[0];
           let mappedRole: 'siswa' | 'guru' | 'admin' | 'superadmin' = 'siswa';
-          if (profile.role === 'admin' || profile.role === 'operator') {
-            mappedRole = cleanInput.includes('super') ? 'superadmin' : 'admin';
+          if (profile.role === 'superadmin' || cleanInput.includes('super') || cleanInput === 'kepsek') {
+            mappedRole = 'superadmin';
+          } else if (profile.role === 'admin' || profile.role === 'operator') {
+            mappedRole = 'admin';
           } else if (profile.role === 'guru') {
             mappedRole = 'guru';
           } else {

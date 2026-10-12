@@ -1,44 +1,32 @@
-export const supabase = {
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://cfcdqmajoazxcoxgnoka.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmY2RxbWFqb2F6eGNveGdub2thIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NjUzNzEsImV4cCI6MjEwNjM0MTM3MX0.wLxxXMBd0q8HZM0HGhfGb0yMuA-a3daofIHMK8Bxjmc';
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    getSession: async () => ({ data: { session: null } }),
-    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
-    signInWithPassword: async () => ({ data: null, error: new Error('Mock mode') }),
-    signOut: async () => ({}),
-    getUser: async () => ({ data: { user: null } }),
-    updateUser: async () => ({ data: null, error: null }),
+    persistSession: true,
+    autoRefreshToken: true,
   },
-  from: () => ({
-    select: () => ({
-      eq: () => ({ single: async () => ({ data: null }), order: () => ({ limit: async () => ({ data: [] }) }) }),
-      single: async () => ({ data: null }),
-      order: () => ({ data: [] }),
-      limit: async () => ({ data: [] }),
-    }),
-    insert: () => ({ select: () => ({ single: async () => ({ data: null }) }) }),
-    update: () => ({ eq: () => ({ select: () => ({ single: async () => ({ data: null }) }) }) }),
-    delete: () => ({ eq: async () => ({ error: null }) }),
-    upsert: () => ({ select: async () => ({ data: null }) }),
-  }),
-};
+});
 
-// ─── TIPE DATA (match existing DB) ──────────────────────────────────────
+// ─── TIPE DATA (sesuai schema.sql) ──────────────────────────────────────
 
-export type AttendanceStatus = 'Hadir' | 'Izin' | 'Sakit' | 'Alfa' | 'Terlambat';
-export type AttendanceStatusDB = 'Hadir' | 'Izin' | 'Sakit' | 'Alfa' | 'Terlambat';
-export type Role = 'siswa' | 'guru' | 'admin';
+export type StatusAbsen = 'Hadir' | 'Izin' | 'Sakit' | 'Alfa' | 'Terlambat';
+export type StatusValidasi = 'draft' | 'tervalidasi';
+export type StatusStreak = 'aktif' | 'padam' | 'beku';
 export type HariEnum = 'Senin' | 'Selasa' | 'Rabu' | 'Kamis' | 'Jumat' | 'Sabtu';
+export type RoleEnum = 'superadmin' | 'admin' | 'guru' | 'siswa';
 
 export interface Profile {
   id: string;
   username: string;
   nama: string;
-  role: Role;
-  is_sekretaris?: boolean;
+  role: RoleEnum;
   kelas_id: string | null;
   must_change_password: boolean;
   phone?: string;
   avatar_url?: string;
-  created_at?: string;
   kelas?: { id: string; nama: string } | null;
 }
 
@@ -46,13 +34,11 @@ export interface Kelas {
   id: string;
   nama: string;
   wali_kelas_id: string | null;
-  created_at?: string;
 }
 
 export interface Mapel {
   id: string;
   nama: string;
-  created_at?: string;
 }
 
 export interface Jadwal {
@@ -63,7 +49,6 @@ export interface Jadwal {
   hari: HariEnum;
   jam_mulai: string;
   jam_selesai: string;
-  created_at?: string;
   kelas?: { id: string; nama: string };
   mapel?: { id: string; nama: string };
   guru?: { id: string; nama: string };
@@ -74,12 +59,11 @@ export interface AbsenHarian {
   tanggal: string;
   siswa_id: string;
   kelas_id: string;
-  status: AttendanceStatusDB;
+  status: StatusAbsen;
   keterangan: string | null;
   diinput_oleh: string | null;
   divalidasi_oleh: string | null;
-  status_validasi: 'draft' | 'tervalidasi';
-  created_at?: string;
+  status_validasi: StatusValidasi;
 }
 
 export interface AbsenMapel {
@@ -87,72 +71,24 @@ export interface AbsenMapel {
   tanggal: string;
   jadwal_id: string;
   siswa_id: string;
-  status: AttendanceStatusDB;
+  status: StatusAbsen;
   diinput_oleh: string | null;
-  created_at?: string;
 }
 
-export type AttendanceStatusUI = 'Hadir' | 'Sakit' | 'Izin' | 'Alfa';
-export interface Student {
+export interface Streak {
+  siswa_id: string;
+  jumlah: number;
+  status: StatusStreak;
+  tanggal_update: string;
+}
+
+export interface PanggilanGuru {
   id: string;
-  no: string;
-  name: string;
-  nis: string;
-  status: AttendanceStatusUI;
-  note?: string;
-  hasAttachment?: boolean;
-  attachmentTitle?: string;
-  attachmentType?: 'medical' | 'dispensation';
-}
-
-export interface ScheduleSlot {
-  id: string;
-  day: HariEnum;
-  isBreak?: boolean;
-  breakTitle?: string;
-  breakSubtitle?: string;
-  breakDuration?: string;
-  breakIcon?: string;
-  breakColor?: 'amber' | 'emerald';
-  jpStart?: number;
-  jpEnd?: number;
-  jpLabel?: string;
-  timeRange: string;
-  subject?: string;
-  subjectCode?: string;
-  teacher?: string;
-  room?: string;
-  badgeType?: 'live' | 'upcoming' | 'normal' | 'break';
-  statusPresensi?: 'Hadir' | 'Belum' | 'Menunggu';
-  recordedTime?: string;
-}
-
-export interface NotificationItem {
-  id: string;
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-  type: 'attendance' | 'schedule' | 'broadcast';
-}
-
-export function dbToUIStatus(status: AttendanceStatusDB): AttendanceStatusUI {
-  const map: Record<string, AttendanceStatusUI> = {
-    'Hadir': 'Hadir',
-    'Izin': 'Izin',
-    'Sakit': 'Sakit',
-    'Alfa': 'Alfa',
-    'Terlambat': 'Hadir'
-  };
-  return map[status] || 'Alfa';
-}
-
-export function uiToDBStatus(status: AttendanceStatusUI): AttendanceStatusDB {
-  const map: Record<string, AttendanceStatusDB> = {
-    'Hadir': 'Hadir',
-    'Izin': 'Izin',
-    'Sakit': 'Sakit',
-    'Alfa': 'Alfa'
-  };
-  return map[status] || 'Alfa';
+  jadwal_id: string;
+  kelas_id: string;
+  dibuat_oleh: string;
+  waktu: string;
+  status: 'menunggu' | 'ditanggapi';
+  pesan: string | null;
+  tanggal: string;
 }

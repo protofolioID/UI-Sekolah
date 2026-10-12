@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { BottomNav, TabType } from './components/BottomNav';
 import { LoginScreen } from './components/LoginScreen';
@@ -12,7 +12,6 @@ import { GuruDashboardView } from './components/GuruDashboardView';
 import { AdminDashboardView } from './components/AdminDashboardView';
 import { ScheduleModal } from './components/ScheduleModal';
 import { AttachmentModal } from './components/AttachmentModal';
-import { QrScanModal } from './components/QrScanModal';
 import { LencanaModal } from './components/LencanaModal';
 import { IzinModal } from './components/IzinModal';
 import { NotificationsModal } from './components/NotificationsModal';
@@ -51,7 +50,6 @@ export default function App() {
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [editingSlot, setEditingSlot] = useState<ScheduleSlot | null>(null);
   const [selectedStudentAttachment, setSelectedStudentAttachment] = useState<Student | null>(null);
-  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isLencanaModalOpen, setIsLencanaModalOpen] = useState(false);
   const [isIzinModalOpen, setIsIzinModalOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -64,8 +62,82 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 2800);
   };
 
+  // ─── LIVE SUPABASE DATA SYNC ───
+  useEffect(() => {
+    async function fetchSupabaseData() {
+      try {
+        const SUPABASE_URL = 'https://cfcdqmajoazxcoxgnoka.supabase.co';
+        const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmY2RxbWFqb2F6eGNveGdub2thIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NjUzNzEsImV4cCI6MjEwNjM0MTM3MX0.wLxxXMBd0q8HZM0HGhfGb0yMuA-a3daofIHMK8Bxjmc';
+        const headers = { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` };
+
+        // 1. Fetch live schedules
+        const schedRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/jadwal?select=id,hari,jam_mulai,jam_selesai,kelas(nama),mapel(nama),guru:profiles(nama)&order=jam_mulai.asc&limit=100`,
+          { headers }
+        );
+        if (schedRes.ok) {
+          const rawSched = await schedRes.json();
+          if (Array.isArray(rawSched) && rawSched.length > 0) {
+            const mapped: ScheduleSlot[] = rawSched.map((item: any, idx: number) => {
+              const day = (['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'].includes(item.hari)
+                ? item.hari
+                : 'Senin') as any;
+              const timeRange = `${(item.jam_mulai || '07:15').slice(0, 5)} - ${(item.jam_selesai || '08:45').slice(0, 5)} WIT`;
+              return {
+                id: item.id || `sch-db-${idx}`,
+                day,
+                jpStart: 1,
+                jpEnd: 3,
+                jpLabel: `JP ${idx + 1}`,
+                timeRange,
+                subject: item.mapel?.nama || 'Mata Pelajaran Kejuruan',
+                teacher: item.guru?.nama || 'Guru Pengampu SMKN 1',
+                room: item.kelas?.nama ? `Lab ${item.kelas.nama}` : 'Lab Komputer 2',
+                badgeType: 'normal',
+              };
+            });
+            // Merge with default curated slots to ensure all days are complete
+            setSchedules((prev) => {
+              const breaks = prev.filter((p) => p.isBreak);
+              return [...mapped, ...breaks];
+            });
+          }
+        }
+
+        // 2. Fetch live students
+        const studRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/profiles?role=eq.siswa&select=id,username,nama,kelas:kelas!profiles_kelas_id_fkey(nama)&limit=50`,
+          { headers }
+        );
+        if (studRes.ok) {
+          const rawStud = await studRes.json();
+          if (Array.isArray(rawStud) && rawStud.length > 0) {
+            const mappedStudents: Student[] = rawStud.map((s: any, idx: number) => {
+              const num = idx + 1;
+              const strNum = num < 10 ? `0${num}` : `${num}`;
+              const rawUser = s.username || `202401${strNum}`;
+              const nis = rawUser.startsWith('s') ? rawUser.slice(1) : rawUser;
+              return {
+                id: s.id,
+                no: strNum,
+                name: s.nama || `Siswa ${num}`,
+                nis,
+                status: 'Hadir',
+              };
+            });
+            setStudents(mappedStudents);
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase live fetch fallback to local:', err);
+      }
+    }
+
+    fetchSupabaseData();
+  }, []);
+
   // ─── LOGIN HANDLER ───
-  const handleLogin = (username: string, role?: UserRole) => {
+  const handleLogin = (username: string, role?: UserRole, nama?: string) => {
     const roleMap: Record<string, { role: UserRole; nama: string }> = {
       's0097658890': { role: 'siswa', nama: 'Cindy Laura' },
       '196812291993031011': { role: 'guru', nama: 'Budi Santoso, S.Kom' },
@@ -74,7 +146,7 @@ export default function App() {
     };
     const match = roleMap[username];
     const finalRole = role || match?.role || 'siswa';
-    const finalNama = match?.nama || username;
+    const finalNama = nama || match?.nama || username;
     setSession({ username, role: finalRole, nama: finalNama });
     setIsPublicSchedule(false);
     setCurrentTab('beranda');
@@ -161,6 +233,11 @@ export default function App() {
     showToast(`${newSchedules.length} jadwal berhasil diimpor dari file Excel!`);
   };
 
+  const handleImportStudents = (newStudents: Student[]) => {
+    setStudents(newStudents);
+    showToast(`${newStudents.length} data siswa berhasil diimpor dari file Excel!`);
+  };
+
   // ─── NOTIFICATIONS ───
   const handleMarkAllNotificationsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
@@ -172,7 +249,7 @@ export default function App() {
   // ─── IZIN ───
   const handleIzinSubmit = (type: string, _reason: string) => {
     setIsIzinModalOpen(false);
-    showToast(`Pengajuan ${type} berhasil dikirim ke Wali Kelas!`);
+    showToast(`Pengajuan ${type} berhasil dikirim ke Guru Mapel & Tata Usaha!`);
   };
 
   // ─── DOWNLOAD RECAP ───
@@ -265,6 +342,7 @@ export default function App() {
               schedules={schedules}
               students={students}
               onImportSchedules={handleImportSchedules}
+              onImportStudents={handleImportStudents}
             />
           ) : role === 'guru' ? (
             <GuruDashboardView
@@ -275,12 +353,11 @@ export default function App() {
             />
           ) : (
             <BerandaView
+              session={session}
               onNavigateToJadwal={() => setCurrentTab('jadwal')}
               onNavigateToRekap={() => setCurrentTab('rekap')}
-              onNavigateToAbsensi={() => setIsAbsensiOpen(true)}
               onOpenIzinModal={() => setIsIzinModalOpen(true)}
               onOpenLencanaModal={() => setIsLencanaModalOpen(true)}
-              onOpenQrScan={() => setIsQrModalOpen(true)}
               onOpenNotifications={() => setIsNotificationsOpen(true)}
             />
           )
@@ -300,6 +377,8 @@ export default function App() {
             onBackToBeranda={() => setCurrentTab('beranda')}
             onDownloadReport={handleDownloadRecapPDF}
             userRole={role}
+            session={session}
+            students={students}
           />
         ) : (
           <ProfilView
@@ -315,6 +394,7 @@ export default function App() {
       {!isAbsensiOpen && (
         <BottomNav
           activeTab={currentTab}
+          userRole={role}
           onTabChange={(tab) => {
             setIsAbsensiOpen(false);
             setCurrentTab(tab);
@@ -346,14 +426,6 @@ export default function App() {
       <AttachmentModal
         student={selectedStudentAttachment}
         onClose={() => setSelectedStudentAttachment(null)}
-      />
-
-      <QrScanModal
-        isOpen={isQrModalOpen}
-        onClose={() => setIsQrModalOpen(false)}
-        onSuccess={(session) => {
-          showToast(`Presensi Berhasil: Hadir pada ${session}`);
-        }}
       />
 
       <LencanaModal

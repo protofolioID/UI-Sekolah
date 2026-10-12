@@ -30,7 +30,7 @@ export const ProfilView: React.FC<ProfilViewProps> = ({
     : role === 'admin'
     ? 'Admin TU / Operator Sekolah'
     : isGuru
-    ? 'Guru Pengampu / Wali Kelas'
+    ? 'Guru Mata Pelajaran'
     : 'Siswa Aktif (XII TKJ 1)';
 
   const avatar = isGuru
@@ -94,8 +94,8 @@ export const ProfilView: React.FC<ProfilViewProps> = ({
                   <span className="font-bold text-[#00609b]">24 Jam Pelajaran (JP) / Minggu</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-[#eceef0]">
-                  <span className="text-[#404751]">Wali Kelas</span>
-                  <span className="font-bold text-[#191c1e]">Kelas XII TKJ 1</span>
+                  <span className="text-[#404751]">Penugasan Ruang</span>
+                  <span className="font-bold text-[#191c1e]">Lab Komputer 2 &amp; Bengkel Jaringan</span>
                 </div>
               </>
             ) : isAdmin ? (
@@ -126,7 +126,7 @@ export const ProfilView: React.FC<ProfilViewProps> = ({
                   <span className="font-bold text-[#191c1e]">Kelas XII TKJ 1</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-[#eceef0]">
-                  <span className="text-[#404751]">Wali Kelas</span>
+                  <span className="text-[#404751]">Guru Pengampu</span>
                   <span className="font-bold text-[#00609b]">Budi Santoso, S.Kom</span>
                 </div>
               </>
