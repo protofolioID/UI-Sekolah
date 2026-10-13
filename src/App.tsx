@@ -262,6 +262,17 @@ export default function App() {
   const isTeacherOrAbove = role === 'guru' || role === 'admin' || role === 'superadmin';
   const isAdmin = role === 'admin' || role === 'superadmin';
 
+  // Derive registered class for student
+  const currentStudentObj = role === 'siswa'
+    ? students.find(
+        (s) =>
+          s.nis === session.username ||
+          s.name.toLowerCase() === session.nama.toLowerCase() ||
+          `s${s.nis}` === session.username
+      )
+    : undefined;
+  const studentClass = currentStudentObj?.kelas || 'XII TKJ 1';
+
   // ─── MAIN APP ───
   return (
     <div className="bg-slate-100 min-h-screen text-[#191c1e] flex flex-col items-center justify-start font-sans selection:bg-[#77b7fe] selection:text-[#00487a]">
@@ -336,6 +347,8 @@ export default function App() {
             onPrint={() => setIsPrintModalOpen(true)}
             onOpenAbsensiKelas={(_slot) => setIsAbsensiOpen(true)}
             userRole={role}
+            session={session}
+            studentClass={studentClass}
             onImportSchedules={handleImportSchedules}
           />
         ) : currentTab === 'rekap' ? (

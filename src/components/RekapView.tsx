@@ -26,6 +26,7 @@ export const RekapView: React.FC<RekapViewProps> = ({
   students = INITIAL_STUDENTS,
 }) => {
   const isTeacherOrAdmin = userRole === 'guru' || userRole === 'admin' || userRole === 'superadmin';
+  const [rekapTab, setRekapTab] = useState<'pribadi' | 'kelas'>(isTeacherOrAdmin ? 'kelas' : 'pribadi');
   const [selectedClass, setSelectedClass] = useState('XII TKJ 1');
   const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState('Minggu 2 (8 - 14 Okt)');
@@ -33,7 +34,7 @@ export const RekapView: React.FC<RekapViewProps> = ({
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-  const classList = ['XII TKJ 1', 'XII DKV 1', 'XII RPL 1', 'XI TKJ 2'];
+  const classList = ['XII TKJ 1', 'XII DKV 1', 'Semua Siswa'];
   const weekList = [
     'Minggu 1 (1 - 7 Okt)',
     'Minggu 2 (8 - 14 Okt)',
@@ -46,11 +47,10 @@ export const RekapView: React.FC<RekapViewProps> = ({
   const rawId = session?.username || '0068192041';
   const studentNis = rawId.startsWith('s') ? rawId.slice(1) : rawId;
 
-  // Filter students by selectedClass
-  const displayedStudents = students.filter(
-    (s) => !s.kelas || s.kelas === selectedClass
-  );
-  const classStudents = displayedStudents.length > 0 ? displayedStudents : students;
+  // Filter students by selectedClass dynamically (5 TKJ vs 5 DKV vs 10 Semua Siswa)
+  const classStudents = selectedClass === 'Semua Siswa'
+    ? students
+    : students.filter((s) => (s.kelas || 'XII TKJ 1') === selectedClass);
 
   // Student specific history
   const historyItems = [
@@ -76,8 +76,8 @@ export const RekapView: React.FC<RekapViewProps> = ({
     exportWeeklyAttendanceRecapToExcel(classStudents, selectedClass, selectedWeek, selectedMonth);
   };
 
-  // ─── GURU / ADMIN VIEW: REKAP KELAS ───
-  if (isTeacherOrAdmin) {
+  // ─── GURU / ADMIN / SISWA MATRIKS VIEW: REKAP KELAS ───
+  if (isTeacherOrAdmin || rekapTab === 'kelas') {
     return (
       <div className="flex flex-col w-full pb-28">
         {/* Curved Blue Header */}
@@ -129,7 +129,9 @@ export const RekapView: React.FC<RekapViewProps> = ({
             <div>
               <h2 className="text-[20px] font-bold">Rekap Kehadiran Mingguan</h2>
               <p className="text-[12px] text-[#cfe4ff]">
-                Laporan presensi mengajar {session?.nama || 'Guru Mapel'}
+                {isTeacherOrAdmin
+                  ? `Laporan presensi mengajar ${session?.nama || 'Guru Mapel'}`
+                  : `Matriks Kehadiran Rombel ${selectedClass}`}
               </p>
             </div>
 
@@ -138,14 +140,21 @@ export const RekapView: React.FC<RekapViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsClassDropdownOpen(!isClassDropdownOpen)}
-                className="bg-white/15 hover:bg-white/25 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1 text-[12px] font-bold active:scale-95 transition-all cursor-pointer"
+                className="bg-white/20 hover:bg-white/30 backdrop-blur-md px-3.5 py-1.5 rounded-full flex items-center gap-1.5 text-[12px] font-bold active:scale-95 transition-all cursor-pointer ring-1 ring-white/30 shadow-xs"
+                title="Pilih Kelas / Rombel"
               >
+                <span className="material-symbols-outlined text-[16px]">school</span>
                 <span>{selectedClass}</span>
-                <span className="material-symbols-outlined text-[16px]">expand_more</span>
+                <span
+                  className="material-symbols-outlined text-[16px] transition-transform duration-200"
+                  style={{ transform: isClassDropdownOpen ? 'rotate(180deg)' : 'none' }}
+                >
+                  expand_more
+                </span>
               </button>
 
               {isClassDropdownOpen && (
-                <div className="absolute right-0 top-full mt-1.5 w-40 bg-white rounded-2xl shadow-xl border border-[#eceef0] py-1 z-30 animate-fadeIn text-[#191c1e]">
+                <div className="absolute right-0 top-full mt-1.5 w-44 bg-white rounded-2xl shadow-2xl border border-[#eceef0] py-1.5 z-30 animate-fadeIn text-[#191c1e]">
                   {classList.map((c) => (
                     <button
                       key={c}
@@ -154,7 +163,7 @@ export const RekapView: React.FC<RekapViewProps> = ({
                         setSelectedClass(c);
                         setIsClassDropdownOpen(false);
                       }}
-                      className={`w-full text-left px-3.5 py-2 text-[12px] flex items-center justify-between hover:bg-[#cfe4ff]/30 ${
+                      className={`w-full text-left px-3.5 py-2 text-[12px] flex items-center justify-between hover:bg-[#cfe4ff]/30 transition-colors ${
                         selectedClass === c ? 'font-bold text-[#00609b] bg-[#cfe4ff]/20' : ''
                       }`}
                     >
@@ -170,6 +179,28 @@ export const RekapView: React.FC<RekapViewProps> = ({
               )}
             </div>
           </div>
+
+          {/* Tab Switcher (Khusus Tampilan Siswa) */}
+          {!isTeacherOrAdmin && (
+            <div className="flex bg-black/20 backdrop-blur-md p-1 rounded-xl gap-1 mt-3">
+              <button
+                type="button"
+                onClick={() => setRekapTab('pribadi')}
+                className="flex-1 py-1.5 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 text-white/80 hover:text-white cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[14px]">person</span>
+                <span>Presensi Saya</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRekapTab('kelas')}
+                className="flex-1 py-1.5 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 bg-white text-[#00609b] shadow-xs cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[14px]">group</span>
+                <span>Matriks Rombel (TKJ/DKV)</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Floating Content Island */}
@@ -369,6 +400,28 @@ export const RekapView: React.FC<RekapViewProps> = ({
           <h2 className="text-[20px] font-bold">Laporan Disiplin {studentName}</h2>
           <p className="text-[12px] text-[#cfe4ff]">NISN: {studentNis} • Kelas XII TKJ 1</p>
         </div>
+
+        {/* Tab Switcher (Khusus Tampilan Siswa) */}
+        {!isTeacherOrAdmin && (
+          <div className="flex bg-black/20 backdrop-blur-md p-1 rounded-xl gap-1 mt-3">
+            <button
+              type="button"
+              onClick={() => setRekapTab('pribadi')}
+              className="flex-1 py-1.5 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 bg-white text-[#00609b] shadow-xs cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[14px]">person</span>
+              <span>Presensi Saya</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setRekapTab('kelas')}
+              className="flex-1 py-1.5 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 text-white/80 hover:text-white cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[14px]">group</span>
+              <span>Matriks Rombel (TKJ/DKV)</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Floating Metrics Island */}

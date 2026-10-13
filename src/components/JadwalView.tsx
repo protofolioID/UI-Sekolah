@@ -12,6 +12,8 @@ interface JadwalViewProps {
   onPrint: () => void;
   onOpenAbsensiKelas: (slot: ScheduleSlot) => void;
   userRole?: 'siswa' | 'guru' | 'admin' | 'superadmin';
+  session?: any;
+  studentClass?: string;
   onImportSchedules?: (newSchedules: ScheduleSlot[]) => void;
 }
 
@@ -24,9 +26,17 @@ export const JadwalView: React.FC<JadwalViewProps> = ({
   onPrint,
   onOpenAbsensiKelas,
   userRole = 'siswa',
+  session,
+  studentClass,
   onImportSchedules,
 }) => {
-  const [selectedClass, setSelectedClass] = useState('XII TKJ 1');
+  const isSiswa = userRole === 'siswa';
+  const isAdminOrSuper = userRole === 'admin' || userRole === 'superadmin';
+  const isGuru = userRole === 'guru';
+
+  // For students, lock strictly to their registered class (cannot change class)
+  const defaultClass = isSiswa ? (studentClass || 'XII TKJ 1') : 'XII TKJ 1';
+  const [selectedClass, setSelectedClass] = useState(defaultClass);
   const [selectedDay, setSelectedDay] = useState<'Senin' | 'Selasa' | 'Rabu' | 'Kamis' | 'Jumat' | 'Sabtu'>('Selasa');
   const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -39,9 +49,6 @@ export const JadwalView: React.FC<JadwalViewProps> = ({
     'Jumat',
     'Sabtu',
   ];
-
-  const isAdminOrSuper = userRole === 'admin' || userRole === 'superadmin';
-  const isGuru = userRole === 'guru';
 
   // Schedule filtering:
   // - GURU: Shows teacher's own teaching schedule
@@ -106,14 +113,21 @@ export const JadwalView: React.FC<JadwalViewProps> = ({
               {isGuru ? 'Guru Pengampu' : 'Kompetensi Keahlian'}
             </p>
             <p className="text-[17px] font-extrabold leading-tight">
-              {isGuru ? 'Budi Santoso, S.Kom' : 'Teknik Komputer & Jaringan (TKJ)'}
+              {isGuru
+                ? 'Budi Santoso, S.Kom'
+                : selectedClass.includes('DKV')
+                ? 'Desain Komunikasi Visual (DKV)'
+                : 'Teknik Komputer & Jaringan (TKJ)'}
             </p>
             {isGuru && (
               <p className="text-[11px] text-white/80">NIP: 196812291993031011 • SMKN 1 Sorong</p>
             )}
+            {isSiswa && (
+              <p className="text-[11px] text-white/80">Rombel Siswa: {selectedClass} • Terkunci Resmi</p>
+            )}
           </div>
 
-          {!isGuru && (
+          {!isGuru && isAdminOrSuper && (
             <button
               type="button"
               onClick={() => setIsClassDropdownOpen(!isClassDropdownOpen)}
@@ -129,105 +143,124 @@ export const JadwalView: React.FC<JadwalViewProps> = ({
       {/* Main Floating Island Content Area */}
       <div className="px-4 -mt-9 flex flex-col gap-3 pb-8 relative z-10">
         {/* Filter Selector Card */}
-        <div className="bg-white rounded-2xl p-3 shadow-md border border-[#eceef0]/70">
-          <div className={`grid ${isGuru ? 'grid-cols-1' : 'grid-cols-2'} gap-2 relative`}>
-            {/* Selector 1: Kelas (Hanya untuk Siswa/Admin) */}
-            {!isGuru && (
-              <div className="flex flex-col gap-1 relative">
-                <label className="text-[11px] text-[#404751] font-semibold">
-                  Pilih Rombel / Kelas
+        <div className="bg-white rounded-2xl p-3.5 shadow-md border border-[#eceef0]/70 flex flex-col gap-3">
+          {/* Selector 1: Kelas (HANYA UNTUK ADMIN / SUPERADMIN - SISWA TIDAK BISA GANTI KELAS) */}
+          {isAdminOrSuper && (
+            <div className="flex flex-col gap-1 relative">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] text-[#404751] font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[15px] text-[#00609b]">school</span>
+                  <span>Pilih Rombel / Kelas (Admin)</span>
                 </label>
-                <div
-                  onClick={() => setIsClassDropdownOpen(!isClassDropdownOpen)}
-                  className="relative flex items-center bg-[#f2f4f6] rounded-xl px-3 py-2 cursor-pointer hover:bg-[#eceef0] transition-colors"
-                >
-                  <span className="material-symbols-outlined text-[18px] text-[#00609b] mr-1.5">
-                    school
-                  </span>
-                  <span className="text-[14px] text-[#191c1e] font-bold flex-1 truncate">
-                    {selectedClass}
-                  </span>
-                  <span className="material-symbols-outlined text-[18px] text-[#707882]">
-                    expand_more
-                  </span>
-                </div>
-
-                {isClassDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-1 w-full bg-white rounded-xl shadow-xl border border-[#eceef0] z-30 py-1 overflow-hidden animate-fadeIn">
-                    {['XII TKJ 1', 'XII TKJ 2', 'XI RPL 1', 'XI TKJ 1', 'X DKV 1'].map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => {
-                          setSelectedClass(c);
-                          setIsClassDropdownOpen(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 text-[12px] hover:bg-[#cfe4ff]/30 flex items-center justify-between ${
-                          selectedClass === c ? 'font-bold text-[#00609b] bg-[#cfe4ff]/20' : 'text-[#191c1e]'
-                        }`}
-                      >
-                        {c}
-                        {selectedClass === c && (
-                          <span className="material-symbols-outlined text-[16px] text-[#00609b]">
-                            check
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Selector 2: Hari */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] text-[#404751] font-semibold">
-                Hari Pembelajaran
-              </label>
-              <div className="relative flex items-center bg-[#f2f4f6] rounded-xl px-3 py-2 cursor-pointer hover:bg-[#eceef0] transition-colors">
-                <span className="material-symbols-outlined text-[18px] text-[#00609b] mr-1.5">
-                  calendar_today
+                <span className="text-[10px] text-[#00609b] font-bold bg-[#cfe4ff]/60 px-2.5 py-0.5 rounded-full">
+                  Rombel: {selectedClass}
                 </span>
-                <select
-                  value={selectedDay}
-                  onChange={(e) => setSelectedDay(e.target.value as any)}
-                  className="w-full bg-transparent text-[14px] text-[#191c1e] font-bold appearance-none outline-hidden cursor-pointer"
+              </div>
+              <div
+                onClick={() => setIsClassDropdownOpen(!isClassDropdownOpen)}
+                className="relative flex items-center bg-[#f2f4f6] rounded-xl px-3.5 py-2.5 cursor-pointer hover:bg-[#eceef0] transition-colors"
+              >
+                <span className="text-[14px] text-[#191c1e] font-extrabold flex-1 truncate">
+                  {selectedClass}
+                </span>
+                <span
+                  className="material-symbols-outlined text-[20px] text-[#707882] transition-transform duration-200"
+                  style={{ transform: isClassDropdownOpen ? 'rotate(180deg)' : 'none' }}
                 >
-                  {days.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-                <span className="material-symbols-outlined text-[18px] text-[#707882] pointer-events-none">
                   expand_more
                 </span>
               </div>
-            </div>
-          </div>
 
-          {/* Quick Day Strip Carousel */}
-          <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-[#eceef0] overflow-x-auto no-scrollbar">
-            {days.map((day) => {
-              const isSelected = selectedDay === day;
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => setSelectedDay(day)}
-                  className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all shrink-0 flex items-center gap-1 ${
-                    isSelected
-                      ? 'bg-[#00609b] text-white font-bold shadow-xs'
-                      : 'bg-[#eceef0] text-[#404751] hover:bg-[#e6e8ea]'
-                  }`}
-                >
-                  <span>{day}</span>
-                  {isSelected && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#6ffbbe]" />
-                  )}
-                </button>
-              );
-            })}
+              {isClassDropdownOpen && (
+                <div className="absolute top-full left-0 mt-1 w-full bg-white rounded-2xl shadow-xl border border-[#eceef0] z-30 py-1.5 overflow-hidden animate-fadeIn">
+                  {['XII TKJ 1', 'XII DKV 1', 'XII RPL 1', 'XI TKJ 1', 'X DKV 1'].map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => {
+                        setSelectedClass(c);
+                        setIsClassDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3.5 py-2 text-[12px] hover:bg-[#cfe4ff]/30 flex items-center justify-between transition-colors ${
+                        selectedClass === c ? 'font-bold text-[#00609b] bg-[#cfe4ff]/20' : 'text-[#191c1e]'
+                      }`}
+                    >
+                      <span>{c}</span>
+                      {selectedClass === c && (
+                        <span className="material-symbols-outlined text-[16px] text-[#00609b]">
+                          check
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Locked Class Indicator untuk Siswa (HANYA BISA LIHAT JADWAL SENDIRI) */}
+          {isSiswa && (
+            <div className="flex items-center justify-between bg-[#f2f4f6] rounded-xl px-3.5 py-2.5 border border-[#e2e6eb]">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="material-symbols-outlined text-[#00609b] text-[18px]">school</span>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-[#707882] uppercase font-bold tracking-wider">Jadwal Kelas Terdaftar</p>
+                  <p className="text-[13px] font-extrabold text-[#191c1e] truncate">{selectedClass}</p>
+                </div>
+              </div>
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full shadow-2xs">
+                <span className="material-symbols-outlined text-[12px]">lock</span>
+                <span>Rombel Resmi (Terkunci)</span>
+              </span>
+            </div>
+          )}
+
+          {/* Fluid Animated Slidebar: Hari Pembelajaran (Tanpa Dropdown) */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between px-0.5">
+              <label className="text-[11px] text-[#404751] font-bold uppercase tracking-wider flex items-center gap-1">
+                <span className="material-symbols-outlined text-[15px] text-[#00609b]">calendar_today</span>
+                <span>Hari Pembelajaran</span>
+              </label>
+              <div className="flex items-center gap-1 text-[10px] text-[#707882]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#00609b] animate-ping" />
+                <span className="font-semibold text-[#00609b]">Geser fluid</span>
+                <span className="material-symbols-outlined text-[13px] animate-pulse">swipe</span>
+              </div>
+            </div>
+
+            {/* Slidebar Horizontal dengan Smooth Scrolling & Active Glowing Animation */}
+            <div className="relative flex items-center w-full">
+              <div
+                className="flex items-center gap-2 overflow-x-auto scroll-smooth no-scrollbar py-1.5 px-0.5 w-full touch-pan-x"
+                style={{ scrollSnapType: 'x proximity' }}
+              >
+                {days.map((day) => {
+                  const isSelected = selectedDay === day;
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={(e) => {
+                        setSelectedDay(day);
+                        e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                      }}
+                      className={`relative px-4 py-2 rounded-2xl text-[12px] font-bold transition-all duration-300 ease-out shrink-0 flex items-center gap-1.5 cursor-pointer active:scale-95 select-none ${
+                        isSelected
+                          ? 'bg-gradient-to-r from-[#00609b] to-[#0761a2] text-white shadow-[0_4px_14px_rgba(0,96,155,0.35)] scale-[1.03] ring-2 ring-[#00609b]/25'
+                          : 'bg-[#f2f4f6] text-[#404751] hover:bg-[#e4e7ea] hover:text-[#191c1e]'
+                      }`}
+                      style={{ scrollSnapAlign: 'center' }}
+                    >
+                      <span>{day}</span>
+                      {isSelected && (
+                        <span className="w-2 h-2 rounded-full bg-[#6ffbbe] shadow-[0_0_8px_#6ffbbe] animate-pulse" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
 
