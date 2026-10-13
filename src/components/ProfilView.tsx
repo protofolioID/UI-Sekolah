@@ -14,6 +14,13 @@ interface ProfilViewProps {
   onNavigateToAbsensi: () => void;
 }
 
+export function getUserAvatar(session?: UserSession | null): string {
+  const role = session?.role || 'siswa';
+  if (role === 'guru') return ASSETS.teacherAvatar;
+  if (role === 'admin' || role === 'superadmin') return ASSETS.adminAvatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80';
+  return ASSETS.cindyPortrait;
+}
+
 export const ProfilView: React.FC<ProfilViewProps> = ({
   session,
   onLogout,
@@ -33,11 +40,7 @@ export const ProfilView: React.FC<ProfilViewProps> = ({
     ? 'Guru Mata Pelajaran'
     : 'Siswa Aktif (XII TKJ 1)';
 
-  const avatar = isGuru
-    ? ASSETS.teacherAvatar
-    : isAdmin
-    ? 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80'
-    : ASSETS.cindyPortrait;
+  const avatar = getUserAvatar(session);
 
   const displayName = session?.nama || (isGuru ? 'Budi Santoso, S.Kom' : isAdmin ? 'Administrator SIAP' : 'Cindy Laura');
   const identifierLabel = isGuru ? 'NIP' : isAdmin ? 'ID Petugas' : 'NISN';
@@ -126,8 +129,8 @@ export const ProfilView: React.FC<ProfilViewProps> = ({
                   <span className="font-bold text-[#191c1e]">Kelas XII TKJ 1</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-[#eceef0]">
-                  <span className="text-[#404751]">Guru Pengampu</span>
-                  <span className="font-bold text-[#00609b]">Budi Santoso, S.Kom</span>
+                  <span className="text-[#404751]">Status Akademik</span>
+                  <span className="font-bold text-emerald-600">Siswa Aktif Terdaftar</span>
                 </div>
               </>
             )}

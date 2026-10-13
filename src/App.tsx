@@ -7,7 +7,7 @@ import { BerandaView } from './components/BerandaView';
 import { JadwalView } from './components/JadwalView';
 import { AbsensiView } from './components/AbsensiView';
 import { RekapView } from './components/RekapView';
-import { ProfilView } from './components/ProfilView';
+import { ProfilView, getUserAvatar } from './components/ProfilView';
 import { GuruDashboardView } from './components/GuruDashboardView';
 import { AdminDashboardView } from './components/AdminDashboardView';
 import { ScheduleModal } from './components/ScheduleModal';
@@ -62,78 +62,23 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 2800);
   };
 
-  // ─── LIVE SUPABASE DATA SYNC ───
+  // ─── LIVE SUPABASE CONNECTIVITY ───
   useEffect(() => {
-    async function fetchSupabaseData() {
+    async function checkSupabaseConnection() {
       try {
         const SUPABASE_URL = 'https://cfcdqmajoazxcoxgnoka.supabase.co';
         const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmY2RxbWFqb2F6eGNveGdub2thIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NjUzNzEsImV4cCI6MjEwNjM0MTM3MX0.wLxxXMBd0q8HZM0HGhfGb0yMuA-a3daofIHMK8Bxjmc';
         const headers = { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` };
-
-        // 1. Fetch live schedules
-        const schedRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/jadwal?select=id,hari,jam_mulai,jam_selesai,kelas(nama),mapel(nama),guru:profiles(nama)&order=jam_mulai.asc&limit=100`,
-          { headers }
-        );
-        if (schedRes.ok) {
-          const rawSched = await schedRes.json();
-          if (Array.isArray(rawSched) && rawSched.length > 0) {
-            const mapped: ScheduleSlot[] = rawSched.map((item: any, idx: number) => {
-              const day = (['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'].includes(item.hari)
-                ? item.hari
-                : 'Senin') as any;
-              const timeRange = `${(item.jam_mulai || '07:15').slice(0, 5)} - ${(item.jam_selesai || '08:45').slice(0, 5)} WIT`;
-              return {
-                id: item.id || `sch-db-${idx}`,
-                day,
-                jpStart: 1,
-                jpEnd: 3,
-                jpLabel: `JP ${idx + 1}`,
-                timeRange,
-                subject: item.mapel?.nama || 'Mata Pelajaran Kejuruan',
-                teacher: item.guru?.nama || 'Guru Pengampu SMKN 1',
-                room: item.kelas?.nama ? `Lab ${item.kelas.nama}` : 'Lab Komputer 2',
-                badgeType: 'normal',
-              };
-            });
-            // Merge with default curated slots to ensure all days are complete
-            setSchedules((prev) => {
-              const breaks = prev.filter((p) => p.isBreak);
-              return [...mapped, ...breaks];
-            });
-          }
-        }
-
-        // 2. Fetch live students
-        const studRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/profiles?role=eq.siswa&select=id,username,nama,kelas:kelas!profiles_kelas_id_fkey(nama)&limit=50`,
-          { headers }
-        );
-        if (studRes.ok) {
-          const rawStud = await studRes.json();
-          if (Array.isArray(rawStud) && rawStud.length > 0) {
-            const mappedStudents: Student[] = rawStud.map((s: any, idx: number) => {
-              const num = idx + 1;
-              const strNum = num < 10 ? `0${num}` : `${num}`;
-              const rawUser = s.username || `202401${strNum}`;
-              const nis = rawUser.startsWith('s') ? rawUser.slice(1) : rawUser;
-              return {
-                id: s.id,
-                no: strNum,
-                name: s.nama || `Siswa ${num}`,
-                nis,
-                status: 'Hadir',
-              };
-            });
-            setStudents(mappedStudents);
-          }
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id&limit=1`, { headers });
+        if (res.ok) {
+          // Connected live
         }
       } catch (err) {
-        console.warn('Supabase live fetch fallback to local:', err);
+        console.warn('Supabase check fallback:', err);
       }
     }
 
-    fetchSupabaseData();
+    checkSupabaseConnection();
   }, []);
 
   // ─── LOGIN HANDLER ───
@@ -317,6 +262,7 @@ export default function App() {
             setCurrentTab('profil');
           }}
           unreadCount={unreadNotificationsCount}
+          avatarUrl={getUserAvatar(session)}
         />
 
         {/* Main View Area */}
@@ -336,7 +282,6 @@ export default function App() {
             <AdminDashboardView
               onOpenScheduleManager={handleOpenAddSchedule}
               onOpenPrintModal={() => setIsPrintModalOpen(true)}
-              onOpenAbsensiKelas={() => setIsAbsensiOpen(true)}
               onOpenNotifications={() => setIsNotificationsOpen(true)}
               roleTitle={role === 'superadmin' ? 'Kepala Sekolah / IT Admin' : 'Tata Usaha / Operator'}
               schedules={schedules}
@@ -399,6 +344,7 @@ export default function App() {
             setIsAbsensiOpen(false);
             setCurrentTab(tab);
           }}
+          onQuickAbsenClick={() => setIsAbsensiOpen(true)}
         />
       )}
 
@@ -444,6 +390,11 @@ export default function App() {
         notifications={notifications}
         onClose={() => setIsNotificationsOpen(false)}
         onMarkAllAsRead={handleMarkAllNotificationsRead}
+        userRole={role}
+        onAddNotification={(newNotif) => {
+          setNotifications((prev) => [newNotif, ...prev]);
+          showToast('Pemberitahuan berhasil disiarkan!');
+        }}
       />
 
       <PrintModal

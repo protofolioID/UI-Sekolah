@@ -11,7 +11,6 @@ import { ScheduleSlot, Student } from '../types';
 interface AdminDashboardViewProps {
   onOpenScheduleManager: () => void;
   onOpenPrintModal: () => void;
-  onOpenAbsensiKelas: () => void;
   onOpenNotifications: () => void;
   roleTitle?: string;
   schedules?: ScheduleSlot[];
@@ -23,7 +22,6 @@ interface AdminDashboardViewProps {
 export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   onOpenScheduleManager,
   onOpenPrintModal,
-  onOpenAbsensiKelas,
   onOpenNotifications,
   roleTitle = 'Tata Usaha / Operator',
   schedules = [],
@@ -454,16 +452,16 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
               <button
                 type="button"
-                onClick={onOpenAbsensiKelas}
+                onClick={onOpenNotifications}
                 className="flex flex-col items-center gap-1.5 group active:scale-95 transition-transform cursor-pointer"
               >
                 <div className="w-14 h-14 rounded-2xl bg-[#6ffbbe]/30 flex items-center justify-center shadow-xs group-hover:bg-[#6ffbbe]/50 transition-colors">
                   <span className="material-symbols-outlined text-[#006947] text-[26px]">
-                    checklist
+                    campaign
                   </span>
                 </div>
                 <span className="text-[11px] text-[#191c1e] font-semibold text-center leading-tight">
-                  Validasi Absen
+                  Pengumuman
                 </span>
               </button>
 

@@ -124,7 +124,10 @@ export const GuruDashboardView: React.FC<GuruDashboardViewProps> = ({
       {/* Content Stream */}
       <div className="px-4 -mt-8 flex flex-col gap-4 relative z-20">
         {/* Active Class Highlight Card */}
-        <div className="bg-white rounded-3xl p-5 shadow-[0_10px_25px_-5px_rgba(0,95,160,0.1)] border border-[#eceef0] flex flex-col gap-3">
+        <div
+          onClick={() => onOpenAbsensiKelas('e88128be-8fc3-4973-8d69-00ef17571626', 'XII TKJ 1', 'Pemodelan Perangkat Lunak (BA)')}
+          className="bg-white rounded-3xl p-5 shadow-[0_10px_25px_-5px_rgba(0,95,160,0.12)] border-2 border-[#00609b]/20 hover:border-[#00609b] flex flex-col gap-3 cursor-pointer transition-all active:scale-[0.99] group"
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#006947] animate-pulse" />
@@ -139,7 +142,7 @@ export const GuruDashboardView: React.FC<GuruDashboardViewProps> = ({
 
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between">
-              <h3 className="text-[18px] font-extrabold text-[#191c1e]">
+              <h3 className="text-[19px] font-extrabold text-[#191c1e] group-hover:text-[#00609b] transition-colors">
                 XII TKJ 1
               </h3>
               <span className="text-[12px] text-[#00609b] font-bold">
@@ -150,25 +153,35 @@ export const GuruDashboardView: React.FC<GuruDashboardViewProps> = ({
               Pemodelan Perangkat Lunak (BA)
             </p>
             <p className="text-[11px] text-[#707882]">
-              📍 Lab Komputer 2 • 34 Siswa Terdaftar
+              📍 Lab Komputer 2 • 5 Siswa Terdaftar
             </p>
           </div>
 
-          {/* Action Bar */}
+          {/* Action Bar: 2 Menu Klik dengan Kata Sederhana */}
           <div className="pt-3 border-t border-[#eceef0] flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 text-[12px] text-[#006947] font-semibold">
+            <div className="flex items-center gap-1.5 text-[12px] text-[#006947] font-bold">
               <span className="material-symbols-outlined text-[18px]">verified</span>
-              <span>32 Hadir • 1 Izin • 1 Sakit</span>
+              <span>3 Hadir • 1 Izin • 1 Sakit</span>
             </div>
 
-            <button
-              type="button"
-              onClick={() => onOpenAbsensiKelas('e88128be-8fc3-4973-8d69-00ef17571626', 'XII TKJ 1', 'Pemodelan Perangkat Lunak (BA)')}
-              className="px-4 py-2 rounded-full bg-[#00609b] text-white text-[12px] font-bold shadow-sm hover:bg-[#004e80] active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px]">edit_note</span>
-              <span>Validasi Absen</span>
-            </button>
+            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={onNavigateToRekap}
+                className="px-3 py-2 rounded-full border border-[#c3c7cf] hover:bg-[#f0f4f8] text-[#404751] text-[11px] font-bold transition-all"
+                title="Lihat Rekap Presensi Kelas"
+              >
+                Rekap
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenAbsensiKelas('e88128be-8fc3-4973-8d69-00ef17571626', 'XII TKJ 1', 'Pemodelan Perangkat Lunak (BA)')}
+                className="px-4 py-2 rounded-full bg-gradient-to-r from-[#00609b] to-[#0a75c2] text-white text-[12px] font-extrabold shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-[17px]">how_to_reg</span>
+                <span>Mulai Absen</span>
+              </button>
+            </div>
           </div>
         </div>
 

@@ -32,6 +32,8 @@ export interface ScheduleSlot {
   badgeType?: 'live' | 'upcoming' | 'normal' | 'break';
   statusPresensi?: 'Hadir' | 'Belum' | 'Menunggu';
   recordedTime?: string;
+  classTarget?: string; // e.g. 'XII TKJ 1'
+  teacherNip?: string;  // e.g. '196812291993031011'
 }
 
 export interface NotificationItem {
@@ -41,4 +43,5 @@ export interface NotificationItem {
   time: string;
   read: boolean;
   type: 'attendance' | 'schedule' | 'broadcast';
+  targetAudience?: 'semua' | 'guru' | 'siswa';
 }
