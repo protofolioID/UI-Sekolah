@@ -19,9 +19,10 @@ import { PrintModal } from './components/PrintModal';
 import {
   INITIAL_STUDENTS,
   INITIAL_SCHEDULES,
+  INITIAL_TEACHERS,
   NOTIFICATIONS,
 } from './data/mockData';
-import { Student, ScheduleSlot, AttendanceStatus, NotificationItem } from './types';
+import { Student, ScheduleSlot, AttendanceStatus, NotificationItem, Teacher } from './types';
 import { exportAttendanceRecapToExcel } from './utils/excelHelper';
 
 type UserRole = 'siswa' | 'guru' | 'admin' | 'superadmin';
@@ -43,6 +44,7 @@ export default function App() {
 
   // ─── DATA STATE ───
   const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
+  const [teachers, setTeachers] = useState<Teacher[]>(INITIAL_TEACHERS);
   const [schedules, setSchedules] = useState<ScheduleSlot[]>(INITIAL_SCHEDULES);
   const [notifications, setNotifications] = useState<NotificationItem[]>(NOTIFICATIONS);
 
@@ -183,6 +185,20 @@ export default function App() {
     showToast(`${newStudents.length} data siswa berhasil diimpor dari file Excel!`);
   };
 
+  const handleAddTeacher = (newTeacher: Teacher) => {
+    setTeachers((prev) => [newTeacher, ...prev]);
+    showToast(`Guru ${newTeacher.name} berhasil ditambahkan!`);
+  };
+
+  const handleAddStudent = (newStudent: Student) => {
+    setStudents((prev) => [...prev, newStudent]);
+    showToast(`Siswa ${newStudent.name} (${newStudent.kelas || 'Rombel'}) berhasil ditambahkan!`);
+  };
+
+  const handleResetUserPassword = (username: string, _newPass: string) => {
+    showToast(`Kata sandi akun ${username} berhasil disetel ulang!`);
+  };
+
   // ─── NOTIFICATIONS ───
   const handleMarkAllNotificationsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
@@ -286,8 +302,12 @@ export default function App() {
               roleTitle={role === 'superadmin' ? 'Kepala Sekolah / IT Admin' : 'Tata Usaha / Operator'}
               schedules={schedules}
               students={students}
+              teachers={teachers}
               onImportSchedules={handleImportSchedules}
               onImportStudents={handleImportStudents}
+              onAddTeacher={handleAddTeacher}
+              onAddStudent={handleAddStudent}
+              onResetUserPassword={handleResetUserPassword}
             />
           ) : role === 'guru' ? (
             <GuruDashboardView
@@ -295,6 +315,7 @@ export default function App() {
               onNavigateToJadwal={() => setCurrentTab('jadwal')}
               onNavigateToRekap={() => setCurrentTab('rekap')}
               onOpenNotifications={() => setIsNotificationsOpen(true)}
+              students={students}
             />
           ) : (
             <BerandaView

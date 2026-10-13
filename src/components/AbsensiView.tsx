@@ -3,6 +3,7 @@ import { Student, AttendanceStatus } from '../types';
 
 interface AbsensiViewProps {
   students: Student[];
+  currentClass?: string;
   onUpdateStatus: (id: string, status: AttendanceStatus) => void;
   onSetAllHadir: () => void;
   onSaveAndLock: () => void;
@@ -12,17 +13,22 @@ interface AbsensiViewProps {
 
 export const AbsensiView: React.FC<AbsensiViewProps> = ({
   students,
+  currentClass = 'XII TKJ 1',
   onUpdateStatus,
   onSetAllHadir,
   onSaveAndLock,
   onBack,
   onOpenAttachment,
 }) => {
+  const [selectedClass, setSelectedClass] = useState<string>(currentClass);
+  const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [expandedStudentId, setExpandedStudentId] = useState<string>('s-04'); // Kevin Pratama expanded by default like in screenshot
+  const [expandedStudentId, setExpandedStudentId] = useState<string>('s-04');
   const [isSettingAll, setIsSettingAll] = useState(false);
+
+  const availableClasses = ['XII TKJ 1', 'XII DKV 1', 'XII RPL 1', 'XI TKJ 2'];
 
   const handleSetAllHadirClick = () => {
     setIsSettingAll(true);
@@ -32,9 +38,14 @@ export const AbsensiView: React.FC<AbsensiViewProps> = ({
     }, 1200);
   };
 
-  // Filter students based on search and status
+  // Filter students based on selected class, search, and status
+  const classStudents = useMemo(() => {
+    const matched = students.filter((s) => !s.kelas || s.kelas === selectedClass);
+    return matched.length > 0 ? matched : students;
+  }, [students, selectedClass]);
+
   const filteredStudents = useMemo(() => {
-    return students.filter((s) => {
+    return classStudents.filter((s) => {
       const matchSearch =
         s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         s.nis.includes(searchQuery) ||
@@ -43,7 +54,7 @@ export const AbsensiView: React.FC<AbsensiViewProps> = ({
         filterStatus === 'all' || s.status.toLowerCase() === filterStatus.toLowerCase();
       return matchSearch && matchStatus;
     });
-  }, [students, searchQuery, filterStatus]);
+  }, [classStudents, searchQuery, filterStatus]);
 
   // Dynamic status counts
   const stats = useMemo(() => {
@@ -52,15 +63,15 @@ export const AbsensiView: React.FC<AbsensiViewProps> = ({
     let izin = 0;
     let alfa = 0;
 
-    students.forEach((s) => {
+    classStudents.forEach((s) => {
       if (s.status === 'Hadir') hadir++;
       else if (s.status === 'Sakit') sakit++;
       else if (s.status === 'Izin') izin++;
       else if (s.status === 'Alfa') alfa++;
     });
 
-    return { hadir, sakit, izin, alfa, total: students.length };
-  }, [students]);
+    return { hadir, sakit, izin, alfa, total: classStudents.length };
+  }, [classStudents]);
 
   return (
     <div className="flex-1 w-full flex flex-col bg-[#f7f9fb] pb-12">
@@ -89,17 +100,54 @@ export const AbsensiView: React.FC<AbsensiViewProps> = ({
               type="button"
               onClick={onBack}
               aria-label="Tutup"
-              className="w-8 h-8 rounded-full bg-[#f2f4f6] text-[#404751] flex items-center justify-center active:bg-[#e6e8ea] hover:bg-[#e6e8ea] transition-colors"
+              className="w-8 h-8 rounded-full bg-[#f2f4f6] text-[#404751] flex items-center justify-center active:bg-[#e6e8ea] hover:bg-[#e6e8ea] transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">close</span>
             </button>
           </div>
 
-          {/* Class Badge & Context Meta */}
+          {/* Class Selector Dropdown & Context Meta */}
           <div className="mt-2.5 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] bg-[#cfe4ff] text-[#001d34] font-semibold">
-              XII TKJ 1 • BA • JP 1-3
-            </span>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsClassDropdownOpen(!isClassDropdownOpen)}
+                className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[12px] bg-[#cfe4ff] hover:bg-[#b9d9ff] text-[#001d34] font-extrabold transition-all cursor-pointer shadow-xs border border-[#00609b]/20"
+              >
+                <span>{selectedClass}</span>
+                <span className="text-[10px] text-[#00487a] font-semibold">• Sesi Berjalan</span>
+                <span className="material-symbols-outlined text-[16px]">expand_more</span>
+              </button>
+
+              {isClassDropdownOpen && (
+                <div className="absolute left-0 top-full mt-1.5 w-48 bg-white rounded-2xl shadow-xl border border-[#eceef0] py-1.5 z-40 animate-fadeIn text-[#191c1e]">
+                  <div className="px-3 py-1 text-[10px] uppercase font-bold text-[#707882] tracking-wider border-b border-[#f2f4f6]">
+                    Pilih Kelas / Rombel
+                  </div>
+                  {availableClasses.map((cls) => (
+                    <button
+                      key={cls}
+                      type="button"
+                      onClick={() => {
+                        setSelectedClass(cls);
+                        setIsClassDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3.5 py-2 text-[12px] flex items-center justify-between hover:bg-[#cfe4ff]/30 ${
+                        selectedClass === cls ? 'font-bold text-[#00609b] bg-[#cfe4ff]/20' : ''
+                      }`}
+                    >
+                      <span>{cls}</span>
+                      {selectedClass === cls && (
+                        <span className="material-symbols-outlined text-[16px] text-[#00609b]">
+                          check
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center gap-1.5 text-[#404751] text-[12px]">
               <span className="material-symbols-outlined text-[15px] text-[#00609b]">
                 calendar_today

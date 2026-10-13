@@ -1,4 +1,4 @@
-import { Student, ScheduleSlot, NotificationItem } from '../types';
+import { Student, ScheduleSlot, NotificationItem, Teacher } from '../types';
 
 export const ASSETS = {
   logo: '/logo-smkn1.png',
@@ -21,14 +21,55 @@ export const JP_TIMES: Record<number, string> = {
   10: '15:00',
 };
 
-// ─── 5 SISWA RESMI KELAS XII TKJ 1 (DATA DUMMY AKURAT UNTUK PRESENTASI) ───
+// ─── DAFTAR GURU RESMI SMKN 1 SORONG ───
+export const INITIAL_TEACHERS: Teacher[] = [
+  {
+    id: 't-01',
+    nip: '196812291993031011',
+    name: 'Budi Santoso, S.Kom',
+    subject: 'Pemodelan Perangkat Lunak & Web',
+    room: 'Lab Komputer 2',
+  },
+  {
+    id: 't-02',
+    nip: '196504121989032005',
+    name: 'Dra. Yayuk Puji Hastuti',
+    subject: 'Pendidikan Pancasila & PPKn',
+    room: 'Ruang Teori 12',
+  },
+  {
+    id: 't-03',
+    nip: '198205162010011018',
+    name: 'Fransiskus X. D. Busa, S.Kom',
+    subject: 'Keamanan Jaringan & Cyber Security',
+    room: 'Lab Komputer 1',
+  },
+  {
+    id: 't-04',
+    nip: '198008242006042012',
+    name: 'Joana Josephine Sahuburua, S.T',
+    subject: 'Desain Komunikasi Visual (DKV)',
+    room: 'Studio DKV 1',
+  },
+  {
+    id: 't-05',
+    nip: '198502102011022003',
+    name: 'Fonny Fransisca Wanma, S.Pd',
+    subject: 'Bahasa Indonesia & Publikasi',
+    room: 'Ruang Teori 10',
+  },
+];
+
+// ─── 10 SISWA RESMI (5 XII TKJ 1 + 5 XII DKV 1) ───
 export const INITIAL_STUDENTS: Student[] = [
+  // ─── KELAS XII TKJ 1 (5 SISWA) ───
   {
     id: 's-01',
     no: '01',
     name: 'Cindy Laura',
     nis: '0068192041',
     status: 'Hadir',
+    kelas: 'XII TKJ 1',
   },
   {
     id: 's-02',
@@ -36,6 +77,7 @@ export const INITIAL_STUDENTS: Student[] = [
     name: 'Andhika Pratama',
     nis: '0068192042',
     status: 'Hadir',
+    kelas: 'XII TKJ 1',
   },
   {
     id: 's-03',
@@ -43,6 +85,7 @@ export const INITIAL_STUDENTS: Student[] = [
     name: 'Siti Aminah',
     nis: '0068192043',
     status: 'Hadir',
+    kelas: 'XII TKJ 1',
   },
   {
     id: 's-04',
@@ -50,6 +93,7 @@ export const INITIAL_STUDENTS: Student[] = [
     name: 'Doni Tata',
     nis: '0068192044',
     status: 'Sakit',
+    kelas: 'XII TKJ 1',
     note: 'Demam tinggi (Surat dokter RSUD Sele Be Solu Sorong)',
     hasAttachment: true,
     attachmentTitle: 'Surat Keterangan Dokter - RSUD Sele Be Solu Sorong',
@@ -61,14 +105,65 @@ export const INITIAL_STUDENTS: Student[] = [
     name: 'Kevin Pratama',
     nis: '0068192045',
     status: 'Izin',
+    kelas: 'XII TKJ 1',
     note: 'Dispensasi persiapan kontingen LKS SMK Kota Sorong',
     hasAttachment: true,
     attachmentTitle: 'Surat Tugas LKS Tingkat Kota Sorong 2026',
     attachmentType: 'dispensation',
   },
+
+  // ─── KELAS XII DKV 1 (5 SISWA) ───
+  {
+    id: 's-06',
+    no: '01',
+    name: 'Nathan Ivander',
+    nis: '0068192051',
+    status: 'Hadir',
+    kelas: 'XII DKV 1',
+  },
+  {
+    id: 's-07',
+    no: '02',
+    name: 'Putri Natasya',
+    nis: '0068192052',
+    status: 'Hadir',
+    kelas: 'XII DKV 1',
+  },
+  {
+    id: 's-08',
+    no: '03',
+    name: 'Rendy Saputra',
+    nis: '0068192053',
+    status: 'Hadir',
+    kelas: 'XII DKV 1',
+  },
+  {
+    id: 's-09',
+    no: '04',
+    name: 'Jessica Amanda',
+    nis: '0068192054',
+    status: 'Sakit',
+    kelas: 'XII DKV 1',
+    note: 'Sakit tifus ringan (Surat dokter Puskesmas Malawei)',
+    hasAttachment: true,
+    attachmentTitle: 'Surat Sakit Dokter - Puskesmas Malawei Sorong',
+    attachmentType: 'medical',
+  },
+  {
+    id: 's-10',
+    no: '05',
+    name: 'Fajar Nugroho',
+    nis: '0068192055',
+    status: 'Izin',
+    kelas: 'XII DKV 1',
+    note: 'Dispensasi persiapan kontingen desain poster FLS2N Papua Barat Daya',
+    hasAttachment: true,
+    attachmentTitle: 'Surat Tugas FLS2N Bidang Poster Desain 2026',
+    attachmentType: 'dispensation',
+  },
 ];
 
-// ─── JADWAL RESMI KELAS XII TKJ 1 (SENIN S/D SABTU - URUT JP, TIDAK BERTUMPUK) ───
+// ─── JADWAL RESMI KELAS (SENIN S/D SABTU) ───
 export const INITIAL_SCHEDULES: ScheduleSlot[] = [
   // ─── SENIN ───
   {
@@ -237,6 +332,54 @@ export const INITIAL_SCHEDULES: ScheduleSlot[] = [
     badgeType: 'upcoming',
     statusPresensi: 'Menunggu',
     classTarget: 'XII TKJ 1',
+  },
+  // ─── SELASA (KELAS XII DKV 1) ───
+  {
+    id: 'selasa-dkv-1',
+    day: 'Selasa',
+    jpStart: 1,
+    jpEnd: 3,
+    jpLabel: 'JP 1 - 3',
+    timeRange: '07:15 - 09:30 WIT',
+    subject: 'Desain Publikasi & Tipografi DKV',
+    subjectCode: 'DP-DKV',
+    teacher: 'Joana Josephine Sahuburua, S.T',
+    room: 'Studio DKV 1',
+    badgeType: 'live',
+    statusPresensi: 'Menunggu',
+    classTarget: 'XII DKV 1',
+    teacherNip: '198008242006042012',
+  },
+  {
+    id: 'selasa-dkv-2',
+    day: 'Selasa',
+    jpStart: 4,
+    jpEnd: 6,
+    jpLabel: 'JP 4 - 6',
+    timeRange: '10:00 - 12:15 WIT',
+    subject: 'Desain Vektor & Ilustrasi Digital',
+    subjectCode: 'DVI',
+    teacher: 'Joana Josephine Sahuburua, S.T',
+    room: 'Studio DKV 1',
+    badgeType: 'upcoming',
+    statusPresensi: 'Menunggu',
+    classTarget: 'XII DKV 1',
+  },
+  {
+    id: 'selasa-dkv-3',
+    day: 'Selasa',
+    jpStart: 7,
+    jpEnd: 8,
+    jpLabel: 'JP 7 - 8',
+    timeRange: '12:45 - 14:15 WIT',
+    subject: 'Fotografi Studio & Digital Imaging',
+    subjectCode: 'FOTO',
+    teacher: 'Budi Santoso, S.Kom',
+    room: 'Studio Foto & Lab Multimedia',
+    badgeType: 'upcoming',
+    statusPresensi: 'Menunggu',
+    classTarget: 'XII DKV 1',
+    teacherNip: '196812291993031011',
   },
 
   // ─── RABU ───

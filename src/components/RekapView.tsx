@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Student } from '../types';
-import { exportAttendanceRecapToExcel } from '../utils/excelHelper';
+import { exportAttendanceRecapToExcel, exportWeeklyAttendanceRecapToExcel } from '../utils/excelHelper';
 import { INITIAL_STUDENTS, STUDENT_DAILY_ATTENDANCE } from '../data/mockData';
 
 interface UserSession {
@@ -27,13 +27,28 @@ export const RekapView: React.FC<RekapViewProps> = ({
   const isTeacherOrAdmin = userRole === 'guru' || userRole === 'admin' || userRole === 'superadmin';
   const [selectedClass, setSelectedClass] = useState('XII TKJ 1');
   const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState('Oktober 2026');
+  const [selectedWeek, setSelectedWeek] = useState('Minggu 2 (8 - 14 Okt)');
+  const [selectedMonth, setSelectedMonth] = useState('Oktober 2026');
+  const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
 
-  const classList = ['XII TKJ 1', 'XII TKJ 2', 'XII RPL 1', 'XI TKJ 1', 'X PPLG'];
+  const classList = ['XII TKJ 1', 'XII DKV 1', 'XII RPL 1', 'XI TKJ 2'];
+  const weekList = [
+    'Minggu 1 (1 - 7 Okt)',
+    'Minggu 2 (8 - 14 Okt)',
+    'Minggu 3 (15 - 21 Okt)',
+    'Minggu 4 (22 - 28 Okt)',
+  ];
+  const monthList = ['September 2026', 'Oktober 2026', 'November 2026', 'Desember 2026'];
 
   const studentName = session?.nama || 'Cindy Laura';
   const rawId = session?.username || '0068192041';
   const studentNis = rawId.startsWith('s') ? rawId.slice(1) : rawId;
+
+  // Filter students by selectedClass
+  const displayedStudents = students.filter(
+    (s) => !s.kelas || s.kelas === selectedClass
+  );
+  const classStudents = displayedStudents.length > 0 ? displayedStudents : students;
 
   // Student specific history
   const historyItems = [
@@ -46,17 +61,17 @@ export const RekapView: React.FC<RekapViewProps> = ({
   ];
 
   // Class stats for teacher / admin - STRICTLY SYNCED WITH STUDENTS ROSTER
-  const totalStudentsCount = students.length;
-  const hadirCount = students.filter((s) => s.status === 'Hadir').length;
-  const sakitCount = students.filter((s) => s.status === 'Sakit').length;
-  const izinCount = students.filter((s) => s.status === 'Izin').length;
-  const alfaCount = students.filter((s) => s.status === 'Alfa').length;
+  const totalStudentsCount = classStudents.length;
+  const hadirCount = classStudents.filter((s) => s.status === 'Hadir').length;
+  const sakitCount = classStudents.filter((s) => s.status === 'Sakit').length;
+  const izinCount = classStudents.filter((s) => s.status === 'Izin').length;
+  const alfaCount = classStudents.filter((s) => s.status === 'Alfa').length;
   const classAttendancePct = totalStudentsCount > 0 
     ? ((hadirCount / totalStudentsCount) * 100).toFixed(1)
     : '100.0';
 
   const handleExportClassExcel = () => {
-    exportAttendanceRecapToExcel(students, selectedClass, selectedPeriod);
+    exportWeeklyAttendanceRecapToExcel(classStudents, selectedClass, selectedWeek, selectedMonth);
   };
 
   // ─── GURU / ADMIN VIEW: REKAP KELAS ───
@@ -74,14 +89,43 @@ export const RekapView: React.FC<RekapViewProps> = ({
                 Rekap Presensi Rombel
               </span>
             </div>
-            <span className="bg-white/20 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
-              {selectedPeriod}
-            </span>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
+                className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-all"
+              >
+                <span>📅 {selectedMonth}</span>
+                <span className="material-symbols-outlined text-[14px]">expand_more</span>
+              </button>
+              {isMonthDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-40 bg-white rounded-2xl shadow-xl border border-[#eceef0] py-1 z-30 animate-fadeIn text-[#191c1e]">
+                  {monthList.map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => {
+                        setSelectedMonth(m);
+                        setIsMonthDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3.5 py-2 text-[12px] flex items-center justify-between hover:bg-[#cfe4ff]/30 ${
+                        selectedMonth === m ? 'font-bold text-[#00609b] bg-[#cfe4ff]/20' : ''
+                      }`}
+                    >
+                      <span>{m}</span>
+                      {selectedMonth === m && (
+                        <span className="material-symbols-outlined text-[14px] text-[#00609b]">check</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-[20px] font-bold">Rekap Kehadiran Kelas</h2>
+              <h2 className="text-[20px] font-bold">Rekap Kehadiran Mingguan</h2>
               <p className="text-[12px] text-[#cfe4ff]">
                 Laporan presensi mengajar {session?.nama || 'Guru Mapel'}
               </p>
@@ -128,12 +172,40 @@ export const RekapView: React.FC<RekapViewProps> = ({
 
         {/* Floating Content Island */}
         <div className="px-4 -mt-9 flex flex-col gap-4 relative z-10">
+          {/* Week Selection Chips Bar */}
+          <div className="bg-white rounded-2xl p-2.5 shadow-sm border border-[#eceef0] flex flex-col gap-1.5">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#707882]">
+                Pilih Periode Minggu ({selectedMonth})
+              </span>
+              <span className="text-[10px] font-extrabold text-[#00609b] bg-[#cfe4ff]/50 px-2 py-0.5 rounded-full">
+                {selectedWeek}
+              </span>
+            </div>
+            <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+              {weekList.map((w) => (
+                <button
+                  key={w}
+                  type="button"
+                  onClick={() => setSelectedWeek(w)}
+                  className={`px-3 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    selectedWeek === w
+                      ? 'bg-[#00609b] text-white shadow-xs'
+                      : 'bg-[#f2f4f6] text-[#404751] hover:bg-[#e6e8ea]'
+                  }`}
+                >
+                  {w}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Class KPI Card */}
           <div className="bg-white rounded-3xl p-5 shadow-md border border-[#eceef0]/70 flex flex-col gap-3">
             <div className="flex items-center justify-between pb-2 border-b border-[#eceef0]">
               <div>
                 <p className="text-[11px] uppercase tracking-wider text-[#404751] font-bold">
-                  Kehadiran Rata-Rata Kelas
+                  Kehadiran {selectedClass} • {selectedWeek.split(' ')[0]}
                 </p>
                 <div className="flex items-baseline gap-2">
                   <p className="text-[32px] font-extrabold text-[#00609b] leading-tight">
@@ -148,9 +220,10 @@ export const RekapView: React.FC<RekapViewProps> = ({
                 type="button"
                 onClick={handleExportClassExcel}
                 className="px-3.5 py-2 rounded-xl bg-[#00609b] hover:bg-[#0079c2] text-white text-[12px] font-bold shadow-xs flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                title="Unduh format spreadsheet mingguan"
               >
                 <span className="material-symbols-outlined text-[17px]">file_download</span>
-                <span>Ekspor Excel</span>
+                <span>Ekspor Excel Mingguan</span>
               </button>
             </div>
 
@@ -175,19 +248,22 @@ export const RekapView: React.FC<RekapViewProps> = ({
             </div>
           </div>
 
-          {/* Student Roster Table Card - Strictly Synced */}
+          {/* Student Roster Table Card - Strictly Synced with Daily Matrix */}
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-[#eceef0] flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-[14px] font-bold text-[#191c1e]">
-                Daftar Kehadiran Siswa ({selectedClass})
-              </h3>
+              <div>
+                <h3 className="text-[14px] font-bold text-[#191c1e]">
+                  Daftar Kehadiran Siswa ({selectedClass})
+                </h3>
+                <p className="text-[10px] text-[#707882]">Matriks 6 Hari Sekolah (Sen - Sab)</p>
+              </div>
               <span className="text-[11px] text-[#00609b] font-bold bg-[#cfe4ff]/60 px-2.5 py-0.5 rounded-full">
                 {totalStudentsCount} Siswa Terdaftar
               </span>
             </div>
 
             <div className="divide-y divide-[#f2f4f6]">
-              {students.map((s, idx) => (
+              {classStudents.map((s, idx) => (
                 <div key={s.id} className="py-2.5 flex items-center justify-between gap-2 hover:bg-[#f7f9fb] px-1 rounded-lg transition-colors">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span className="w-6 h-6 rounded-full bg-[#f2f4f6] text-[#404751] text-[10px] font-bold flex items-center justify-center shrink-0">
@@ -199,7 +275,23 @@ export const RekapView: React.FC<RekapViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  {/* 6 Days Mini Status Dots (Sen, Sel, Rab, Kam, Jum, Sab) */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="hidden sm:flex items-center gap-1 text-[9px] font-bold text-center">
+                      <span className="w-5 h-5 rounded-md bg-emerald-100 text-emerald-800 flex items-center justify-center">H</span>
+                      <span className={`w-5 h-5 rounded-md flex items-center justify-center ${
+                        s.status === 'Hadir' ? 'bg-emerald-100 text-emerald-800' :
+                        s.status === 'Sakit' ? 'bg-sky-100 text-sky-800' :
+                        s.status === 'Izin' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
+                      }`}>
+                        {s.status === 'Hadir' ? 'H' : s.status === 'Sakit' ? 'S' : s.status === 'Izin' ? 'I' : 'A'}
+                      </span>
+                      <span className="w-5 h-5 rounded-md bg-emerald-100 text-emerald-800 flex items-center justify-center">H</span>
+                      <span className="w-5 h-5 rounded-md bg-emerald-100 text-emerald-800 flex items-center justify-center">H</span>
+                      <span className="w-5 h-5 rounded-md bg-emerald-100 text-emerald-800 flex items-center justify-center">H</span>
+                      <span className="w-5 h-5 rounded-md bg-emerald-100 text-emerald-800 flex items-center justify-center">H</span>
+                    </div>
+
                     <span
                       className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${
                         s.status === 'Hadir'

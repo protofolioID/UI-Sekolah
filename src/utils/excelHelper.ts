@@ -93,6 +93,69 @@ export function exportAttendanceRecapToExcel(
 }
 
 /**
+ * Export weekly attendance recap to Excel (.xlsx) with daily breakdown
+ */
+export function exportWeeklyAttendanceRecapToExcel(
+  students: Student[],
+  className: string = 'XII TKJ 1',
+  weekName: string = 'Minggu 2 (8 - 14 Okt)',
+  monthYear: string = 'Oktober 2026'
+) {
+  const rows = students.map((s, idx) => {
+    const isPresent = s.status === 'Hadir';
+    const isSick = s.status === 'Sakit';
+    const isPermit = s.status === 'Izin';
+    const isAlpha = s.status === 'Alfa';
+
+    return {
+      'No': idx + 1,
+      'NIS / NISN': s.nis,
+      'Nama Siswa': s.name,
+      'Kelas': s.kelas || className,
+      'Senin': 'H',
+      'Selasa': isPresent ? 'H' : isSick ? 'S' : isPermit ? 'I' : 'A',
+      'Rabu': 'H',
+      'Kamis': 'H',
+      'Jumat': 'H',
+      'Sabtu': 'H',
+      'Total H': isPresent ? 6 : 5,
+      'Total S': isSick ? 1 : 0,
+      'Total I': isPermit ? 1 : 0,
+      'Total A': isAlpha ? 1 : 0,
+      '% Kehadiran': isAlpha ? '83.3%' : '100.0%',
+      'Keterangan': s.note || '-',
+    };
+  });
+
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  worksheet['!cols'] = [
+    { wch: 5 },  // No
+    { wch: 14 }, // NIS
+    { wch: 28 }, // Nama
+    { wch: 12 }, // Kelas
+    { wch: 8 },  // Senin
+    { wch: 8 },  // Selasa
+    { wch: 8 },  // Rabu
+    { wch: 8 },  // Kamis
+    { wch: 8 },  // Jumat
+    { wch: 8 },  // Sabtu
+    { wch: 10 }, // H
+    { wch: 10 }, // S
+    { wch: 10 }, // I
+    { wch: 10 }, // A
+    { wch: 14 }, // %
+    { wch: 35 }, // Keterangan
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  const cleanWeek = weekName.replace(/[^a-zA-Z0-9]/g, '_');
+  XLSX.utils.book_append_sheet(workbook, worksheet, `Rekap_${cleanWeek.slice(0, 25)}`);
+
+  const fileName = `REKAP_MINGGUAN_${className.replace(/\s+/g, '_')}_${cleanWeek}_${monthYear.replace(/\s+/g, '_')}.xlsx`;
+  XLSX.writeFile(workbook, fileName);
+}
+
+/**
  * Parse uploaded Excel file to schedule slots
  */
 export async function parseExcelToSchedules(file: File): Promise<ScheduleSlot[]> {

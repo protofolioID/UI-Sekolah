@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { ASSETS } from '../data/mockData';
-import { ScheduleSlot } from '../types';
+import { ASSETS, INITIAL_STUDENTS } from '../data/mockData';
+import { Student } from '../types';
 
 interface GuruDashboardViewProps {
   onOpenAbsensiKelas: (classId: string, className: string, subjectName: string) => void;
   onNavigateToJadwal: () => void;
   onNavigateToRekap: () => void;
   onOpenNotifications: () => void;
+  students?: Student[];
 }
 
 export const GuruDashboardView: React.FC<GuruDashboardViewProps> = ({
@@ -14,8 +15,17 @@ export const GuruDashboardView: React.FC<GuruDashboardViewProps> = ({
   onNavigateToJadwal,
   onNavigateToRekap,
   onOpenNotifications,
+  students = INITIAL_STUDENTS,
 }) => {
   const [selectedDay] = useState('Selasa');
+  const [selectedRosterSession, setSelectedRosterSession] = useState<{
+    className: string;
+    subject: string;
+    room: string;
+    timeRange: string;
+    jpLabel: string;
+    classId: string;
+  } | null>(null);
 
   const teacherScheduleToday = [
     {
@@ -264,23 +274,172 @@ export const GuruDashboardView: React.FC<GuruDashboardViewProps> = ({
                   </span>
                 </div>
 
-                <div className="pt-2 border-t border-[#f2f4f6] flex items-center justify-between">
+                <div className="pt-2 border-t border-[#f2f4f6] flex items-center justify-between gap-2">
                   <span className="text-[11px] text-[#707882]">
                     {item.attendanceSubmitted ? '✅ Absensi Telah Divalidasi' : '⏳ Belum Diabsen'}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => onOpenAbsensiKelas(item.classId, item.className, item.subject)}
-                    className="text-[11px] font-bold text-[#00609b] hover:underline"
-                  >
-                    Buka Roll-Call →
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRosterSession(item)}
+                      className="px-2.5 py-1 rounded-lg border border-[#c3c7cf] hover:bg-[#f0f4f8] text-[#404751] text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">analytics</span>
+                      <span>Rekap</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onOpenAbsensiKelas(item.classId, item.className, item.subject)}
+                      className="px-3 py-1 rounded-lg bg-[#00609b] hover:bg-[#0079c2] text-white text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">how_to_reg</span>
+                      <span>Absen</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
       </div>
+
+      {/* ─── QUICK ROSTER REKAP MODAL (DAFTAR HADIR SISWA) ─── */}
+      {selectedRosterSession && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-[#eceef0] overflow-hidden flex flex-col max-h-[85vh]">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-[#00609b] to-[#0a75c2] text-white p-4 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[18px] text-[#6ffbbe]">analytics</span>
+                  <span className="text-[11px] uppercase font-bold tracking-wider text-[#cfe4ff]">
+                    Rekap Presensi Sesi
+                  </span>
+                </div>
+                <h3 className="text-[16px] font-extrabold">{selectedRosterSession.className}</h3>
+                <p className="text-[11px] text-white/80">{selectedRosterSession.subject} • {selectedRosterSession.jpLabel}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedRosterSession(null)}
+                className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            {/* Quick Status Bar */}
+            <div className="bg-[#f7f9fb] px-4 py-2 border-b border-[#eceef0] flex items-center justify-between text-[11px] font-bold text-[#404751]">
+              <span>📍 {selectedRosterSession.room}</span>
+              <span className="text-[#00609b]">{selectedRosterSession.timeRange}</span>
+            </div>
+
+            {/* Student List */}
+            <div className="p-4 overflow-y-auto divide-y divide-[#f2f4f6] flex-1">
+              {(() => {
+                const roster = students.filter(
+                  (s) => !s.kelas || s.kelas === selectedRosterSession.className
+                );
+                const displayList = roster.length > 0 ? roster : students.slice(0, 5);
+
+                const hadir = displayList.filter((s) => s.status === 'Hadir').length;
+                const sakit = displayList.filter((s) => s.status === 'Sakit').length;
+                const izin = displayList.filter((s) => s.status === 'Izin').length;
+                const alfa = displayList.filter((s) => s.status === 'Alfa').length;
+
+                return (
+                  <div className="flex flex-col gap-3">
+                    {/* Status Pill Counts */}
+                    <div className="grid grid-cols-4 gap-1.5 text-center">
+                      <div className="bg-emerald-50 text-emerald-800 p-2 rounded-xl">
+                        <p className="text-[14px] font-extrabold">{hadir}</p>
+                        <p className="text-[9px] font-bold uppercase">Hadir</p>
+                      </div>
+                      <div className="bg-sky-50 text-sky-800 p-2 rounded-xl">
+                        <p className="text-[14px] font-extrabold">{sakit}</p>
+                        <p className="text-[9px] font-bold uppercase">Sakit</p>
+                      </div>
+                      <div className="bg-amber-50 text-amber-800 p-2 rounded-xl">
+                        <p className="text-[14px] font-extrabold">{izin}</p>
+                        <p className="text-[9px] font-bold uppercase">Izin</p>
+                      </div>
+                      <div className="bg-rose-50 text-rose-800 p-2 rounded-xl">
+                        <p className="text-[14px] font-extrabold">{alfa}</p>
+                        <p className="text-[9px] font-bold uppercase">Alfa</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2 pt-2">
+                      <p className="text-[11px] font-bold text-[#707882] uppercase tracking-wider">
+                        Daftar Kehadiran Siswa ({displayList.length} Murid)
+                      </p>
+                      {displayList.map((s, idx) => (
+                        <div
+                          key={s.id}
+                          className="flex items-center justify-between p-2 rounded-xl hover:bg-[#f7f9fb] transition-colors"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-5 h-5 rounded-full bg-[#f2f4f6] text-[10px] font-bold flex items-center justify-center text-[#707882] shrink-0">
+                              {idx + 1}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-[12px] font-bold text-[#191c1e] truncate">{s.name}</p>
+                              <p className="text-[10px] text-[#707882]">NIS: {s.nis}</p>
+                              {s.note && (
+                                <p className="text-[10px] text-amber-700 italic truncate max-w-[200px]">
+                                  {s.note}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold shrink-0 ${
+                              s.status === 'Hadir'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : s.status === 'Sakit'
+                                ? 'bg-sky-100 text-sky-800'
+                                : s.status === 'Izin'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-rose-100 text-rose-800'
+                            }`}
+                          >
+                            {s.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="p-3 bg-[#f7f9fb] border-t border-[#eceef0] flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRosterSession(null);
+                  onNavigateToRekap();
+                }}
+                className="px-3.5 py-2 rounded-xl border border-[#00609b] text-[#00609b] hover:bg-[#cfe4ff]/30 text-[11px] font-bold transition-all"
+              >
+                Halaman Rekap Detail →
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const s = selectedRosterSession;
+                  setSelectedRosterSession(null);
+                  onOpenAbsensiKelas(s.classId, s.className, s.subject);
+                }}
+                className="px-4 py-2 rounded-xl bg-[#00609b] hover:bg-[#0079c2] text-white text-[11px] font-bold transition-all shadow-xs"
+              >
+                Mulai Absen Sekarang
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

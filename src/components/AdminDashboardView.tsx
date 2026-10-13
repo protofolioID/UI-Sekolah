@@ -6,7 +6,8 @@ import {
   exportStudentsToExcel,
   parseExcelToStudents,
 } from '../utils/excelHelper';
-import { ScheduleSlot, Student } from '../types';
+import { ScheduleSlot, Student, Teacher } from '../types';
+import { INITIAL_TEACHERS } from '../data/mockData';
 
 interface AdminDashboardViewProps {
   onOpenScheduleManager: () => void;
@@ -15,8 +16,12 @@ interface AdminDashboardViewProps {
   roleTitle?: string;
   schedules?: ScheduleSlot[];
   students?: Student[];
+  teachers?: Teacher[];
   onImportSchedules?: (newSchedules: ScheduleSlot[]) => void;
   onImportStudents?: (newStudents: Student[]) => void;
+  onAddTeacher?: (newTeacher: Teacher) => void;
+  onAddStudent?: (newStudent: Student) => void;
+  onResetUserPassword?: (username: string, newPass: string) => void;
 }
 
 export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
@@ -26,12 +31,33 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   roleTitle = 'Tata Usaha / Operator',
   schedules = [],
   students = [],
+  teachers = INITIAL_TEACHERS,
   onImportSchedules,
   onImportStudents,
+  onAddTeacher,
+  onAddStudent,
+  onResetUserPassword,
 }) => {
   const [selectedPeriod, setSelectedPeriod] = useState<'hari_ini' | 'bulan_ini'>('hari_ini');
   const [activeTab, setActiveTab] = useState<'operasional' | 'superadmin'>('operasional');
   const [toastFeedback, setToastFeedback] = useState<string | null>(null);
+
+  // Modals state for Admin (Tambah Guru & Siswa) and Superadmin (Ganti Password)
+  const [isAddTeacherOpen, setIsAddTeacherOpen] = useState(false);
+  const [teacherNip, setTeacherNip] = useState('');
+  const [teacherName, setTeacherName] = useState('');
+  const [teacherSubject, setTeacherSubject] = useState('');
+  const [teacherRoom, setTeacherRoom] = useState('Lab Komputer 2');
+
+  const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+  const [studentNis, setStudentNis] = useState('');
+  const [studentName, setStudentName] = useState('');
+  const [studentClass, setStudentClass] = useState('XII DKV 1');
+  const [studentNo, setStudentNo] = useState('06');
+
+  const [isChangePwOpen, setIsChangePwOpen] = useState(false);
+  const [pwTargetUser, setPwTargetUser] = useState('s0068192041 (Cindy Laura)');
+  const [pwNewValue, setPwNewValue] = useState('');
 
   const scheduleFileInputRef = useRef<HTMLInputElement>(null);
   const studentFileInputRef = useRef<HTMLInputElement>(null);
@@ -117,6 +143,62 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     if (window.confirm('Reset semua kata sandi guru dan siswa yang bermasalah ke standar default "Demo@2026"?')) {
       showFeedback('Kredensial berhasil disetel ulang ke default: Demo@2026!');
     }
+  };
+
+  const handleSaveNewTeacher = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!teacherNip || !teacherName || !teacherSubject) {
+      alert('Harap lengkapi data NIP, Nama, dan Mata Pelajaran guru.');
+      return;
+    }
+    const newT: Teacher = {
+      id: `t-${Date.now()}`,
+      nip: teacherNip.trim(),
+      name: teacherName.trim(),
+      subject: teacherSubject.trim(),
+      room: teacherRoom.trim(),
+    };
+    if (onAddTeacher) onAddTeacher(newT);
+    setIsAddTeacherOpen(false);
+    setTeacherNip('');
+    setTeacherName('');
+    setTeacherSubject('');
+    showFeedback(`Guru ${newT.name} berhasil ditambahkan ke sistem!`);
+  };
+
+  const handleSaveNewStudent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!studentNis || !studentName) {
+      alert('Harap lengkapi NIS dan Nama siswa.');
+      return;
+    }
+    const newS: Student = {
+      id: `s-${Date.now()}`,
+      no: studentNo,
+      nis: studentNis.trim(),
+      name: studentName.trim(),
+      kelas: studentClass,
+      status: 'Hadir',
+    };
+    if (onAddStudent) onAddStudent(newS);
+    setIsAddStudentOpen(false);
+    setStudentNis('');
+    setStudentName('');
+    showFeedback(`Siswa ${newS.name} (${newS.kelas}) berhasil ditambahkan!`);
+  };
+
+  const handleChangePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pwNewValue || pwNewValue.length < 6) {
+      alert('Kata sandi baru minimal 6 karakter.');
+      return;
+    }
+    if (onResetUserPassword) {
+      onResetUserPassword(pwTargetUser, pwNewValue);
+    }
+    setIsChangePwOpen(false);
+    setPwNewValue('');
+    showFeedback(`Kata sandi akun ${pwTargetUser} berhasil diperbarui!`);
   };
 
   return (
@@ -418,34 +500,56 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* Quick Admin Actions Grid */}
-            <div className="grid grid-cols-4 gap-2">
+            {/* Quick Admin Actions Grid (6 Toolkit Terpadu) */}
+            <div className="grid grid-cols-3 gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsAddTeacherOpen(true)}
+                className="p-3 bg-white rounded-2xl border border-[#eceef0] flex flex-col items-center gap-1.5 shadow-xs hover:border-[#00609b] active:scale-95 transition-all cursor-pointer"
+              >
+                <div className="w-11 h-11 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[22px]">person_add</span>
+                </div>
+                <span className="text-[11px] font-bold text-[#191c1e] text-center leading-tight">
+                  + Tambah Guru
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsAddStudentOpen(true)}
+                className="p-3 bg-white rounded-2xl border border-[#eceef0] flex flex-col items-center gap-1.5 shadow-xs hover:border-[#00609b] active:scale-95 transition-all cursor-pointer"
+              >
+                <div className="w-11 h-11 rounded-xl bg-sky-100 text-[#00609b] flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[22px]">group_add</span>
+                </div>
+                <span className="text-[11px] font-bold text-[#191c1e] text-center leading-tight">
+                  + Tambah Siswa
+                </span>
+              </button>
+
               <button
                 type="button"
                 onClick={onOpenScheduleManager}
-                className="flex flex-col items-center gap-1.5 group active:scale-95 transition-transform cursor-pointer"
+                className="p-3 bg-white rounded-2xl border border-[#eceef0] flex flex-col items-center gap-1.5 shadow-xs hover:border-[#00609b] active:scale-95 transition-all cursor-pointer"
               >
-                <div className="w-14 h-14 rounded-2xl bg-[#cfe4ff]/60 flex items-center justify-center shadow-xs group-hover:bg-[#cfe4ff] transition-colors">
-                  <span className="material-symbols-outlined text-[#00609b] text-[26px]">
-                    edit_calendar
-                  </span>
+                <div className="w-11 h-11 rounded-xl bg-[#cfe4ff]/60 text-[#00609b] flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[22px]">edit_calendar</span>
                 </div>
-                <span className="text-[11px] text-[#191c1e] font-semibold text-center leading-tight">
-                  Tambah Slot
+                <span className="text-[11px] font-bold text-[#191c1e] text-center leading-tight">
+                  Jadwal Guru/Siswa
                 </span>
               </button>
 
               <button
                 type="button"
                 onClick={onOpenPrintModal}
-                className="flex flex-col items-center gap-1.5 group active:scale-95 transition-transform cursor-pointer"
+                className="p-3 bg-white rounded-2xl border border-[#eceef0] flex flex-col items-center gap-1.5 shadow-xs hover:border-[#00609b] active:scale-95 transition-all cursor-pointer"
               >
-                <div className="w-14 h-14 rounded-2xl bg-[#d1e4ff]/60 flex items-center justify-center shadow-xs group-hover:bg-[#d1e4ff] transition-colors">
-                  <span className="material-symbols-outlined text-[#0761a2] text-[26px]">
-                    print
-                  </span>
+                <div className="w-11 h-11 rounded-xl bg-[#d1e4ff]/60 text-[#0761a2] flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[22px]">print</span>
                 </div>
-                <span className="text-[11px] text-[#191c1e] font-semibold text-center leading-tight">
+                <span className="text-[11px] font-bold text-[#191c1e] text-center leading-tight">
                   Cetak Jadwal
                 </span>
               </button>
@@ -453,14 +557,12 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               <button
                 type="button"
                 onClick={onOpenNotifications}
-                className="flex flex-col items-center gap-1.5 group active:scale-95 transition-transform cursor-pointer"
+                className="p-3 bg-white rounded-2xl border border-[#eceef0] flex flex-col items-center gap-1.5 shadow-xs hover:border-[#00609b] active:scale-95 transition-all cursor-pointer"
               >
-                <div className="w-14 h-14 rounded-2xl bg-[#6ffbbe]/30 flex items-center justify-center shadow-xs group-hover:bg-[#6ffbbe]/50 transition-colors">
-                  <span className="material-symbols-outlined text-[#006947] text-[26px]">
-                    campaign
-                  </span>
+                <div className="w-11 h-11 rounded-xl bg-[#6ffbbe]/30 text-[#006947] flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[22px]">campaign</span>
                 </div>
-                <span className="text-[11px] text-[#191c1e] font-semibold text-center leading-tight">
+                <span className="text-[11px] font-bold text-[#191c1e] text-center leading-tight">
                   Pengumuman
                 </span>
               </button>
@@ -468,14 +570,12 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               <button
                 type="button"
                 onClick={handleExportRecapExcel}
-                className="flex flex-col items-center gap-1.5 group active:scale-95 transition-transform cursor-pointer"
+                className="p-3 bg-white rounded-2xl border border-[#eceef0] flex flex-col items-center gap-1.5 shadow-xs hover:border-[#00609b] active:scale-95 transition-all cursor-pointer"
               >
-                <div className="w-14 h-14 rounded-2xl bg-[#9acbff]/30 flex items-center justify-center shadow-xs group-hover:bg-[#9acbff]/50 transition-colors">
-                  <span className="material-symbols-outlined text-[#00609b] text-[26px]">
-                    query_stats
-                  </span>
+                <div className="w-11 h-11 rounded-xl bg-[#9acbff]/30 text-[#00609b] flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[22px]">query_stats</span>
                 </div>
-                <span className="text-[11px] text-[#191c1e] font-semibold text-center leading-tight">
+                <span className="text-[11px] font-bold text-[#191c1e] text-center leading-tight">
                   Rekap Sekolah
                 </span>
               </button>
@@ -578,20 +678,39 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 </div>
               </div>
 
-              <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[12px] font-bold text-amber-950">Reset Sandi Massal Default</p>
-                  <p className="text-[11px] text-amber-800">
-                    Setel ulang sandi semua user yang lupa ke default <code className="font-bold">Demo@2026</code>
-                  </p>
+              <div className="flex flex-col gap-2">
+                <div className="p-3 bg-purple-50 rounded-2xl border border-purple-200 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[12px] font-bold text-purple-950">Ganti Kata Sandi Pengguna (Root)</p>
+                    <p className="text-[11px] text-purple-800">
+                      Ubah kata sandi akun siswa, guru mapel, atau operator secara langsung
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsChangePwOpen(true)}
+                    className="px-3 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-[11px] font-bold shrink-0 shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">password</span>
+                    <span>Ganti Sandi</span>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleResetPasswordBulk}
-                  className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold shrink-0 shadow-xs active:scale-95 transition-all"
-                >
-                  Reset Default
-                </button>
+
+                <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[12px] font-bold text-amber-950">Reset Sandi Massal Default</p>
+                    <p className="text-[11px] text-amber-800">
+                      Setel ulang sandi semua user yang lupa ke default <code className="font-bold">Demo@2026</code>
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleResetPasswordBulk}
+                    className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold shrink-0 shadow-xs active:scale-95 transition-all cursor-pointer"
+                  >
+                    Reset Default
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -631,6 +750,262 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* ─── MODAL 1: TAMBAH GURU BARU ─── */}
+      {isAddTeacherOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-[#eceef0] overflow-hidden">
+            <div className="bg-gradient-to-r from-purple-700 to-indigo-700 text-white p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[20px]">person_add</span>
+                <h3 className="text-[16px] font-bold">Tambah Guru Mapel Baru</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddTeacherOpen(false)}
+                className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveNewTeacher} className="p-5 flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold uppercase text-[#404751]">NIP (18 Digit)</label>
+                <input
+                  type="text"
+                  required
+                  value={teacherNip}
+                  onChange={(e) => setTeacherNip(e.target.value)}
+                  placeholder="Contoh: 198008242006042012"
+                  className="w-full h-10 px-3 bg-[#f2f4f6] rounded-xl text-[12px] font-semibold text-[#191c1e] focus:bg-white focus:ring-2 focus:ring-purple-600 outline-hidden border border-transparent focus:border-purple-600"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold uppercase text-[#404751]">Nama Lengkap & Gelar</label>
+                <input
+                  type="text"
+                  required
+                  value={teacherName}
+                  onChange={(e) => setTeacherName(e.target.value)}
+                  placeholder="Contoh: Joana Josephine Sahuburua, S.T"
+                  className="w-full h-10 px-3 bg-[#f2f4f6] rounded-xl text-[12px] font-semibold text-[#191c1e] focus:bg-white focus:ring-2 focus:ring-purple-600 outline-hidden border border-transparent focus:border-purple-600"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold uppercase text-[#404751]">Mata Pelajaran Diampu</label>
+                <input
+                  type="text"
+                  required
+                  value={teacherSubject}
+                  onChange={(e) => setTeacherSubject(e.target.value)}
+                  placeholder="Contoh: Desain Komunikasi Visual (DKV)"
+                  className="w-full h-10 px-3 bg-[#f2f4f6] rounded-xl text-[12px] font-semibold text-[#191c1e] focus:bg-white focus:ring-2 focus:ring-purple-600 outline-hidden border border-transparent focus:border-purple-600"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold uppercase text-[#404751]">Ruang / Lab Default</label>
+                <input
+                  type="text"
+                  value={teacherRoom}
+                  onChange={(e) => setTeacherRoom(e.target.value)}
+                  placeholder="Contoh: Studio DKV 1 / Lab Komputer 2"
+                  className="w-full h-10 px-3 bg-[#f2f4f6] rounded-xl text-[12px] font-semibold text-[#191c1e] focus:bg-white focus:ring-2 focus:ring-purple-600 outline-hidden border border-transparent focus:border-purple-600"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#eceef0] mt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddTeacherOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-[#c3c7cf] text-[#404751] text-[12px] font-bold hover:bg-[#f2f4f6] transition-all cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-[12px] font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
+                >
+                  Simpan Guru
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL 2: TAMBAH SISWA BARU ─── */}
+      {isAddStudentOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-[#eceef0] overflow-hidden">
+            <div className="bg-gradient-to-r from-[#00609b] to-[#0a75c2] text-white p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[20px]">group_add</span>
+                <h3 className="text-[16px] font-bold">Tambah Siswa Baru</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddStudentOpen(false)}
+                className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveNewStudent} className="p-5 flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold uppercase text-[#404751]">NISN / NIS</label>
+                <input
+                  type="text"
+                  required
+                  value={studentNis}
+                  onChange={(e) => setStudentNis(e.target.value)}
+                  placeholder="Contoh: 0068192056"
+                  className="w-full h-10 px-3 bg-[#f2f4f6] rounded-xl text-[12px] font-semibold text-[#191c1e] focus:bg-white focus:ring-2 focus:ring-[#00609b] outline-hidden border border-transparent focus:border-[#00609b]"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold uppercase text-[#404751]">Nama Lengkap Siswa</label>
+                <input
+                  type="text"
+                  required
+                  value={studentName}
+                  onChange={(e) => setStudentName(e.target.value)}
+                  placeholder="Contoh: Nathan Ivander"
+                  className="w-full h-10 px-3 bg-[#f2f4f6] rounded-xl text-[12px] font-semibold text-[#191c1e] focus:bg-white focus:ring-2 focus:ring-[#00609b] outline-hidden border border-transparent focus:border-[#00609b]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-bold uppercase text-[#404751]">Kelas / Rombel</label>
+                  <select
+                    value={studentClass}
+                    onChange={(e) => setStudentClass(e.target.value)}
+                    className="w-full h-10 px-3 bg-[#f2f4f6] rounded-xl text-[12px] font-semibold text-[#191c1e] focus:bg-white focus:ring-2 focus:ring-[#00609b] outline-hidden"
+                  >
+                    <option value="XII DKV 1">XII DKV 1</option>
+                    <option value="XII TKJ 1">XII TKJ 1</option>
+                    <option value="XII RPL 1">XII RPL 1</option>
+                    <option value="XI TKJ 2">XI TKJ 2</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-bold uppercase text-[#404751]">Nomor Absen</label>
+                  <input
+                    type="text"
+                    value={studentNo}
+                    onChange={(e) => setStudentNo(e.target.value)}
+                    placeholder="Contoh: 06"
+                    className="w-full h-10 px-3 bg-[#f2f4f6] rounded-xl text-[12px] font-semibold text-[#191c1e] focus:bg-white focus:ring-2 focus:ring-[#00609b] outline-hidden"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#eceef0] mt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddStudentOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-[#c3c7cf] text-[#404751] text-[12px] font-bold hover:bg-[#f2f4f6] transition-all cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-[#00609b] hover:bg-[#0079c2] text-white text-[12px] font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
+                >
+                  Simpan Siswa
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL 3: GANTI PASSWORD PENGGUNA (SUPERADMIN ROOT) ─── */}
+      {isChangePwOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-purple-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-purple-800 to-indigo-900 text-white p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[20px] text-purple-300">lock_reset</span>
+                <h3 className="text-[16px] font-bold">Ganti Kata Sandi Pengguna</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsChangePwOpen(false)}
+                className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleChangePasswordSubmit} className="p-5 flex flex-col gap-3">
+              <div className="p-3 bg-purple-50 rounded-2xl border border-purple-200 text-[11px] text-purple-900">
+                Otoritas Root Level 0: Ubah langsung kredensial akun siswa, guru, atau admin tanpa perlu verifikasi email.
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold uppercase text-[#404751]">Pilih Akun / Username</label>
+                <select
+                  value={pwTargetUser}
+                  onChange={(e) => setPwTargetUser(e.target.value)}
+                  className="w-full h-10 px-3 bg-[#f2f4f6] rounded-xl text-[12px] font-semibold text-[#191c1e] focus:bg-white focus:ring-2 focus:ring-purple-700 outline-hidden"
+                >
+                  <optgroup label="Siswa">
+                    <option value="s0068192041 (Cindy Laura)">s0068192041 - Cindy Laura (XII TKJ 1)</option>
+                    <option value="s0068192042 (Andhika Pratama)">s0068192042 - Andhika Pratama (XII TKJ 1)</option>
+                    <option value="s0068192051 (Nathan Ivander)">s0068192051 - Nathan Ivander (XII DKV 1)</option>
+                    <option value="s0068192052 (Putri Natasya)">s0068192052 - Putri Natasya (XII DKV 1)</option>
+                  </optgroup>
+                  <optgroup label="Dewan Guru">
+                    <option value="196812291993031011 (Budi Santoso, S.Kom)">196812291993031011 - Budi Santoso, S.Kom</option>
+                    <option value="198008242006042012 (Joana Josephine Sahuburua, S.T)">198008242006042012 - Joana Sahuburua, S.T</option>
+                    <option value="196504121989032005 (Dra. Yayuk Puji Hastuti)">196504121989032005 - Dra. Yayuk Puji Hastuti</option>
+                  </optgroup>
+                  <optgroup label="Administrator & Operator">
+                    <option value="admin_demo (Tata Usaha SMKN 1)">admin_demo - Tata Usaha SMKN 1</option>
+                    <option value="superadmin_sorong (Kepala Sekolah)">superadmin_sorong - Kepala Sekolah</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold uppercase text-[#404751]">Kata Sandi Baru</label>
+                <input
+                  type="text"
+                  required
+                  value={pwNewValue}
+                  onChange={(e) => setPwNewValue(e.target.value)}
+                  placeholder="Masukkan kata sandi baru (min. 6 karakter)"
+                  className="w-full h-10 px-3 bg-[#f2f4f6] rounded-xl text-[12px] font-semibold text-[#191c1e] focus:bg-white focus:ring-2 focus:ring-purple-700 outline-hidden border border-transparent focus:border-purple-700"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#eceef0] mt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsChangePwOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-[#c3c7cf] text-[#404751] text-[12px] font-bold hover:bg-[#f2f4f6] transition-all cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-[12px] font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
+                >
+                  Perbarui Kata Sandi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Floating feedback toast */}
       {toastFeedback && (

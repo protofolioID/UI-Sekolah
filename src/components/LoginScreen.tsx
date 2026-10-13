@@ -136,9 +136,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </span>
               Masuk ke Akun
             </h2>
-            <span className="text-[10px] bg-[#cfe4ff] text-[#001d34] px-2.5 py-0.5 rounded-full font-extrabold">
-              4 Hak Akses Resmi
-            </span>
           </div>
 
           {errorMessage && (

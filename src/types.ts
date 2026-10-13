@@ -6,11 +6,21 @@ export interface Student {
   name: string;
   nis: string;
   status: AttendanceStatus;
+  kelas?: string; // e.g. 'XII TKJ 1' or 'XII DKV 1'
   note?: string;
   hasAttachment?: boolean;
   attachmentTitle?: string;
   attachmentType?: 'medical' | 'dispensation';
 }
+
+export interface Teacher {
+  id: string;
+  nip: string;
+  name: string;
+  subject: string;
+  room?: string;
+}
+
 
 export interface ScheduleSlot {
   id: string;
