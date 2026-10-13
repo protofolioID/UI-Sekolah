@@ -5,9 +5,16 @@ import {
   parseExcelToSchedules,
   exportStudentsToExcel,
   parseExcelToStudents,
+  exportMonthlyAttendanceExcel,
+  exportQuarterlyAttendanceExcel,
+  exportSemesterAttendanceExcel,
+  exportClassFullAttendanceExcel,
+  exportDailyCheckAttendanceExcel,
+  exportByTeacherAttendanceExcel,
 } from '../utils/excelHelper';
-import { ScheduleSlot, Student, Teacher } from '../types';
+import { ScheduleSlot, Student, Teacher, ExportPeriod, ExportBasis } from '../types';
 import { INITIAL_TEACHERS } from '../data/mockData';
+import { ExportKehadiranModal } from './ExportKehadiranModal';
 
 interface AdminDashboardViewProps {
   onOpenScheduleManager: () => void;
@@ -38,11 +45,23 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   onAddStudent,
   onResetUserPassword,
 }) => {
+  const isSuperadmin =
+    roleTitle.toLowerCase().includes('super') ||
+    roleTitle.toLowerCase().includes('kepala');
+
+  // ─── TAB NAVIGATION ───
+  // Admin: dashboard, export, data, jadwal
+  // Superadmin: dashboard, export, data, kebijakan, keamanan
+  const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [selectedPeriod, setSelectedPeriod] = useState<'hari_ini' | 'bulan_ini'>('hari_ini');
-  const [activeTab, setActiveTab] = useState<'operasional' | 'superadmin'>('operasional');
   const [toastFeedback, setToastFeedback] = useState<string | null>(null);
 
-  // Modals state for Admin (Tambah Guru & Siswa) and Superadmin (Ganti Password)
+  // ─── EXPORT MODAL STATE ───
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [modalDefaultPeriod, setModalDefaultPeriod] = useState<ExportPeriod>('bulanan');
+  const [modalDefaultBasis, setModalDefaultBasis] = useState<ExportBasis>('harian');
+
+  // ─── ADMIN CRUD MODALS ───
   const [isAddTeacherOpen, setIsAddTeacherOpen] = useState(false);
   const [teacherNip, setTeacherNip] = useState('');
   const [teacherName, setTeacherName] = useState('');
@@ -62,11 +81,15 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const scheduleFileInputRef = useRef<HTMLInputElement>(null);
   const studentFileInputRef = useRef<HTMLInputElement>(null);
 
-  const isSuperadmin = roleTitle.toLowerCase().includes('super') || roleTitle.toLowerCase().includes('kepala');
-
   const showFeedback = (msg: string) => {
     setToastFeedback(msg);
-    setTimeout(() => setToastFeedback(null), 3000);
+    setTimeout(() => setToastFeedback(null), 3500);
+  };
+
+  const handleOpenExportWizard = (p: ExportPeriod = 'bulanan', b: ExportBasis = 'harian') => {
+    setModalDefaultPeriod(p);
+    setModalDefaultBasis(b);
+    setIsExportModalOpen(true);
   };
 
   const stats = {
@@ -95,7 +118,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     { id: 'log-4', time: 'Kemarin', user: 'Superadmin IT', action: 'Backup Rutin Database & Snapshot Rombel' },
   ];
 
-  // ─── EXCEL ACTIONS ───
+  // ─── QUICK EXCEL ACTIONS ───
   const handleExportScheduleExcel = () => {
     exportScheduleToExcel(schedules, 'XII_TKJ_1');
     showFeedback('Jadwal rombel berhasil diekspor ke format Excel (.xlsx)!');
@@ -109,6 +132,35 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const handleExportRecapExcel = () => {
     exportAttendanceRecapToExcel(students, 'XII_TKJ_1', 'Oktober 2026');
     showFeedback('Rekap presensi sekolah berhasil diekspor ke Excel (.xlsx)!');
+  };
+
+  // Quick 1-Click Exports
+  const handleQuickDailyExport = (periodName: 'mingguan' | 'bulanan' | '3bulan' | 'semester' | 'kelas') => {
+    const defaultClass = 'XII TKJ 1';
+    if (periodName === 'mingguan') {
+      exportDailyCheckAttendanceExcel(students, defaultClass, 'Minggu 2 - Oktober 2026');
+    } else if (periodName === 'bulanan') {
+      exportMonthlyAttendanceExcel(students, defaultClass, 'Oktober', '2026');
+    } else if (periodName === '3bulan') {
+      exportQuarterlyAttendanceExcel(students, defaultClass, ['Oktober', 'November', 'Desember'], '2026');
+    } else if (periodName === 'semester') {
+      exportSemesterAttendanceExcel(students, defaultClass, 'Ganjil', '2026/2027');
+    } else if (periodName === 'kelas') {
+      exportClassFullAttendanceExcel(students, defaultClass, '2026/2027');
+    }
+    showFeedback(`Export Kehadiran Harian (${periodName.toUpperCase()}) berhasil diunduh!`);
+  };
+
+  const handleQuickTeacherExport = (teacherIdx: number) => {
+    const t = teachers[teacherIdx] || teachers[0];
+    exportByTeacherAttendanceExcel(
+      students,
+      'XII TKJ 1',
+      t.name,
+      t.subject,
+      'Semester Ganjil 2026/2027'
+    );
+    showFeedback(`Export Kehadiran Guru ${t.name} (${t.subject}) berhasil diunduh!`);
   };
 
   const handleImportScheduleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -221,7 +273,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
       {/* Header Banner */}
       <div
-        className={`pb-14 pt-4 px-4 rounded-b-[32px] relative overflow-hidden shadow-sm text-white ${
+        className={`pb-12 pt-4 px-4 rounded-b-[32px] relative overflow-hidden shadow-sm text-white ${
           isSuperadmin
             ? 'bg-gradient-to-b from-[#3b0764] via-[#581c87] to-[#00609b]'
             : 'bg-gradient-to-b from-[#00609b] via-[#0079c2] to-[#0761a2]'
@@ -244,24 +296,36 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 <span className="text-base select-none">{isSuperadmin ? '✨' : '⚡'}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-[#cfe4ff] font-semibold uppercase tracking-wider">
+                <span className="text-[11px] text-[#cfe4ff] font-semibold uppercase tracking-wider truncate">
                   {roleTitle}
                 </span>
                 <span className="w-1 h-1 rounded-full bg-[#cfe4ff]/60" />
-                <span className="text-[11px] text-white/80">SMKN 1 Sorong</span>
+                <span className="text-[11px] text-white/80 shrink-0">SMKN 1 Sorong</span>
               </div>
             </div>
           </div>
 
-          <button
-            aria-label="Notifikasi"
-            type="button"
-            onClick={onOpenNotifications}
-            className="relative w-10 h-10 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/25 active:scale-95 transition-all shadow-sm shrink-0"
-          >
-            <span className="material-symbols-outlined text-[22px]">notifications</span>
-            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#ffdad6]" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              aria-label="Export Wizard Cepat"
+              type="button"
+              onClick={() => handleOpenExportWizard('bulanan', 'harian')}
+              className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md text-white text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+            >
+              <span className="material-symbols-outlined text-[15px]">download</span>
+              <span className="hidden sm:inline">Export Excel</span>
+            </button>
+
+            <button
+              aria-label="Notifikasi"
+              type="button"
+              onClick={onOpenNotifications}
+              className="relative w-10 h-10 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/25 active:scale-95 transition-all shadow-sm shrink-0"
+            >
+              <span className="material-symbols-outlined text-[22px]">notifications</span>
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#ffdad6]" />
+            </button>
+          </div>
         </div>
 
         {/* Live System Indicator */}
@@ -271,48 +335,127 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               dns
             </span>
             <span className="text-[11px] font-bold tracking-wide">
-              {isSuperadmin ? 'Root Control Panel • Supabase DB Connected' : 'Operator Portal • Realtime Sync'}
+              {isSuperadmin
+                ? 'Root Control Panel • Supabase DB Connected'
+                : 'Operator Portal • Realtime Sync'}
             </span>
           </div>
-          <span className="text-[10px] bg-[#6ffbbe] text-[#003823] px-2.5 py-0.5 rounded-full font-extrabold">
-            {isSuperadmin ? 'ROOT OK' : 'ONLINE'}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] bg-white/20 text-white px-2 py-0.5 rounded-full font-bold hidden sm:inline">
+              TLS 256-Bit
+            </span>
+            <span className="text-[10px] bg-[#6ffbbe] text-[#003823] px-2.5 py-0.5 rounded-full font-extrabold">
+              {isSuperadmin ? 'ROOT OK' : 'ONLINE'}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Content Stream */}
-      <div className="px-4 -mt-8 flex flex-col gap-4 relative z-20">
-        {/* Superadmin Mode Switcher Pills (If Superadmin) */}
-        {isSuperadmin && (
-          <div className="bg-white p-1 rounded-2xl shadow-sm border border-[#eceef0] flex gap-1">
+      {/* ─── STRUCTURED NAVIGATION TABS (ADMIN vs SUPERADMIN) ─── */}
+      <div className="px-4 -mt-6 flex flex-col gap-4 relative z-20">
+        <div className="bg-white p-1 rounded-2xl shadow-sm border border-[#eceef0] flex gap-1 overflow-x-auto no-scrollbar">
+          {/* Shared Tab: Dashboard */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('dashboard')}
+            className={`px-3 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer ${
+              activeTab === 'dashboard'
+                ? isSuperadmin
+                  ? 'bg-purple-700 text-white shadow-xs'
+                  : 'bg-[#00609b] text-white shadow-xs'
+                : 'text-[#404751] hover:bg-[#f2f4f6]'
+            }`}
+          >
+            <span>📊</span>
+            <span>Dashboard</span>
+          </button>
+
+          {/* Shared Tab: Pusat Export Kehadiran (.xlsx) */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('export')}
+            className={`px-3 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer ${
+              activeTab === 'export'
+                ? isSuperadmin
+                  ? 'bg-purple-700 text-white shadow-xs'
+                  : 'bg-[#00609b] text-white shadow-xs'
+                : 'text-[#404751] hover:bg-[#f2f4f6]'
+            }`}
+          >
+            <span>📥</span>
+            <span>Export Kehadiran</span>
+          </button>
+
+          {/* Shared Tab: Master Data & Rombel */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('data')}
+            className={`px-3 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer ${
+              activeTab === 'data'
+                ? isSuperadmin
+                  ? 'bg-purple-700 text-white shadow-xs'
+                  : 'bg-[#00609b] text-white shadow-xs'
+                : 'text-[#404751] hover:bg-[#f2f4f6]'
+            }`}
+          >
+            <span>📁</span>
+            <span>Data Siswa &amp; Guru</span>
+          </button>
+
+          {/* Admin Exclusive Tab: Jadwal & Siaran */}
+          {!isSuperadmin && (
             <button
               type="button"
-              onClick={() => setActiveTab('operasional')}
-              className={`flex-1 py-2 rounded-xl text-[12px] font-bold transition-all ${
-                activeTab === 'operasional'
+              onClick={() => setActiveTab('jadwal')}
+              className={`px-3 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer ${
+                activeTab === 'jadwal'
                   ? 'bg-[#00609b] text-white shadow-xs'
                   : 'text-[#404751] hover:bg-[#f2f4f6]'
               }`}
             >
-              📊 Ringkasan &amp; Operasional
+              <span>📢</span>
+              <span>Jadwal &amp; Pengumuman</span>
             </button>
+          )}
+
+          {/* Superadmin Exclusive Tabs: Kebijakan Root */}
+          {isSuperadmin && (
             <button
               type="button"
-              onClick={() => setActiveTab('superadmin')}
-              className={`flex-1 py-2 rounded-xl text-[12px] font-bold transition-all ${
-                activeTab === 'superadmin'
+              onClick={() => setActiveTab('kebijakan')}
+              className={`px-3 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer ${
+                activeTab === 'kebijakan'
                   ? 'bg-purple-700 text-white shadow-xs'
                   : 'text-[#404751] hover:bg-[#f2f4f6]'
               }`}
             >
-              👑 Kontrol Root &amp; Kebijakan
+              <span>⚙️</span>
+              <span>Kebijakan Root</span>
             </button>
-          </div>
-        )}
+          )}
 
-        {/* ─── TAB 1: OPERASIONAL & TOOLKIT ─── */}
-        {activeTab === 'operasional' ? (
-          <>
+          {/* Superadmin Exclusive Tabs: Keamanan & Akun */}
+          {isSuperadmin && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('keamanan')}
+              className={`px-3 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer ${
+                activeTab === 'keamanan'
+                  ? 'bg-purple-700 text-white shadow-xs'
+                  : 'text-[#404751] hover:bg-[#f2f4f6]'
+              }`}
+            >
+              <span>🛡️</span>
+              <span>Keamanan &amp; Akun</span>
+            </button>
+          )}
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* TAB 1: DASHBOARD & REKAPITULASI PRESENSI                           */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'dashboard' && (
+          <div className="flex flex-col gap-4 animate-fadeIn">
             {/* KPI Summary Card */}
             <div className="bg-white rounded-3xl p-5 shadow-[0_10px_25px_-5px_rgba(0,95,160,0.1)] border border-[#eceef0] flex flex-col gap-4">
               <div className="flex items-center justify-between">
@@ -327,7 +470,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     type="button"
                     onClick={() => setSelectedPeriod('hari_ini')}
                     className={`px-2 py-0.5 rounded-md transition-all ${
-                      selectedPeriod === 'hari_ini' ? 'bg-[#00609b] text-white shadow-xs' : 'text-[#404751]'
+                      selectedPeriod === 'hari_ini'
+                        ? 'bg-[#00609b] text-white shadow-xs'
+                        : 'text-[#404751]'
                     }`}
                   >
                     Hari Ini
@@ -336,7 +481,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     type="button"
                     onClick={() => setSelectedPeriod('bulan_ini')}
                     className={`px-2 py-0.5 rounded-md transition-all ${
-                      selectedPeriod === 'bulan_ini' ? 'bg-[#00609b] text-white shadow-xs' : 'text-[#404751]'
+                      selectedPeriod === 'bulan_ini'
+                        ? 'bg-[#00609b] text-white shadow-xs'
+                        : 'text-[#404751]'
                     }`}
                   >
                     Bulan Ini
@@ -398,186 +545,25 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* PUSAT IMPORT & EXPORT EXCEL (POINT 9 & FEATURE #5) */}
-            <div className="bg-white rounded-3xl p-4 shadow-sm border border-[#eceef0] flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-[13px] font-extrabold uppercase tracking-wider text-[#191c1e] flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[#00609b] text-[18px]">
-                    file_present
-                  </span>
-                  <span>Pusat Import &amp; Export Data (.xlsx)</span>
-                </h3>
-                <span className="text-[10px] font-bold bg-[#6ffbbe]/30 text-[#006947] px-2 py-0.5 rounded-full">
-                  Toolkit Operator
+            {/* Quick Action Bar to Export Wizard */}
+            <div className="bg-gradient-to-r from-[#00609b] to-[#0761a2] text-white p-4 rounded-3xl shadow-sm flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-[20px] shrink-0">
+                  📊
                 </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {/* 1. JADWAL PELAJARAN */}
-                <div className="p-3 bg-[#f7f9fb] rounded-2xl border border-[#eceef0] flex flex-col justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-7 h-7 rounded-lg bg-[#cfe4ff] text-[#00609b] flex items-center justify-center text-[14px]">
-                      📅
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-[#191c1e] truncate">Jadwal Pelajaran</p>
-                      <p className="text-[9px] text-[#707882]">Slot JP per Rombel</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-1.5 pt-1 border-t border-[#eceef0]">
-                    <button
-                      type="button"
-                      onClick={handleExportScheduleExcel}
-                      className="flex-1 py-1 px-2 rounded-lg bg-white border border-[#cfe4ff] hover:bg-[#cfe4ff]/30 text-[10px] font-bold text-[#00609b] flex items-center justify-center gap-1 active:scale-95 transition-all"
-                    >
-                      <span className="material-symbols-outlined text-[13px]">download</span>
-                      <span>Ekspor</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => scheduleFileInputRef.current?.click()}
-                      className="flex-1 py-1 px-2 rounded-lg bg-[#00609b] hover:bg-[#0079c2] text-[10px] font-bold text-white flex items-center justify-center gap-1 active:scale-95 transition-all"
-                    >
-                      <span className="material-symbols-outlined text-[13px]">upload</span>
-                      <span>Impor</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 2. DATA SISWA & ROMBEL */}
-                <div className="p-3 bg-[#f7f9fb] rounded-2xl border border-[#eceef0] flex flex-col justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-7 h-7 rounded-lg bg-[#d1e4ff] text-[#0761a2] flex items-center justify-center text-[14px]">
-                      🎓
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-[#191c1e] truncate">Data Siswa / Roster</p>
-                      <p className="text-[9px] text-[#707882]">Nama, NISN, Rombel</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-1.5 pt-1 border-t border-[#eceef0]">
-                    <button
-                      type="button"
-                      onClick={handleExportStudentExcel}
-                      className="flex-1 py-1 px-2 rounded-lg bg-white border border-[#d1e4ff] hover:bg-[#d1e4ff]/30 text-[10px] font-bold text-[#0761a2] flex items-center justify-center gap-1 active:scale-95 transition-all"
-                    >
-                      <span className="material-symbols-outlined text-[13px]">download</span>
-                      <span>Ekspor</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => studentFileInputRef.current?.click()}
-                      className="flex-1 py-1 px-2 rounded-lg bg-[#0761a2] hover:bg-[#00487a] text-[10px] font-bold text-white flex items-center justify-center gap-1 active:scale-95 transition-all"
-                    >
-                      <span className="material-symbols-outlined text-[13px]">upload</span>
-                      <span>Impor</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 3. REKAP BULANAN */}
-                <div className="p-3 bg-[#f7f9fb] rounded-2xl border border-[#eceef0] flex flex-col justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-7 h-7 rounded-lg bg-[#6ffbbe]/30 text-[#006947] flex items-center justify-center text-[14px]">
-                      📊
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-[#191c1e] truncate">Rekapitulasi Presensi</p>
-                      <p className="text-[9px] text-[#707882]">Laporan Sekolah .xlsx</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-1.5 pt-1 border-t border-[#eceef0]">
-                    <button
-                      type="button"
-                      onClick={handleExportRecapExcel}
-                      className="w-full py-1 px-2 rounded-lg bg-[#006947] hover:bg-[#005236] text-[10px] font-bold text-white flex items-center justify-center gap-1 active:scale-95 transition-all"
-                    >
-                      <span className="material-symbols-outlined text-[13px]">download</span>
-                      <span>Ekspor Rekap Bulanan</span>
-                    </button>
-                  </div>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-bold truncate">Export Laporan Presensi Excel</p>
+                  <p className="text-[10px] text-[#cfe4ff] truncate">
+                    Mulai dari mingguan, bulanan, 3 bulan, 1 semester, 1 kelas (2 basis)
+                  </p>
                 </div>
               </div>
-            </div>
-
-            {/* Quick Admin Actions Grid (6 Toolkit Terpadu) */}
-            <div className="grid grid-cols-3 gap-2.5">
               <button
                 type="button"
-                onClick={() => setIsAddTeacherOpen(true)}
-                className="p-3 bg-white rounded-2xl border border-[#eceef0] flex flex-col items-center gap-1.5 shadow-xs hover:border-[#00609b] active:scale-95 transition-all cursor-pointer"
+                onClick={() => handleOpenExportWizard('bulanan', 'harian')}
+                className="px-3.5 py-2 rounded-xl bg-white text-[#00609b] text-[11px] font-bold hover:bg-[#cfe4ff] active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer"
               >
-                <div className="w-11 h-11 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[22px]">person_add</span>
-                </div>
-                <span className="text-[11px] font-bold text-[#191c1e] text-center leading-tight">
-                  + Tambah Guru
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsAddStudentOpen(true)}
-                className="p-3 bg-white rounded-2xl border border-[#eceef0] flex flex-col items-center gap-1.5 shadow-xs hover:border-[#00609b] active:scale-95 transition-all cursor-pointer"
-              >
-                <div className="w-11 h-11 rounded-xl bg-sky-100 text-[#00609b] flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[22px]">group_add</span>
-                </div>
-                <span className="text-[11px] font-bold text-[#191c1e] text-center leading-tight">
-                  + Tambah Siswa
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={onOpenScheduleManager}
-                className="p-3 bg-white rounded-2xl border border-[#eceef0] flex flex-col items-center gap-1.5 shadow-xs hover:border-[#00609b] active:scale-95 transition-all cursor-pointer"
-              >
-                <div className="w-11 h-11 rounded-xl bg-[#cfe4ff]/60 text-[#00609b] flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[22px]">edit_calendar</span>
-                </div>
-                <span className="text-[11px] font-bold text-[#191c1e] text-center leading-tight">
-                  Jadwal Guru/Siswa
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={onOpenPrintModal}
-                className="p-3 bg-white rounded-2xl border border-[#eceef0] flex flex-col items-center gap-1.5 shadow-xs hover:border-[#00609b] active:scale-95 transition-all cursor-pointer"
-              >
-                <div className="w-11 h-11 rounded-xl bg-[#d1e4ff]/60 text-[#0761a2] flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[22px]">print</span>
-                </div>
-                <span className="text-[11px] font-bold text-[#191c1e] text-center leading-tight">
-                  Cetak Jadwal
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={onOpenNotifications}
-                className="p-3 bg-white rounded-2xl border border-[#eceef0] flex flex-col items-center gap-1.5 shadow-xs hover:border-[#00609b] active:scale-95 transition-all cursor-pointer"
-              >
-                <div className="w-11 h-11 rounded-xl bg-[#6ffbbe]/30 text-[#006947] flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[22px]">campaign</span>
-                </div>
-                <span className="text-[11px] font-bold text-[#191c1e] text-center leading-tight">
-                  Pengumuman
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleExportRecapExcel}
-                className="p-3 bg-white rounded-2xl border border-[#eceef0] flex flex-col items-center gap-1.5 shadow-xs hover:border-[#00609b] active:scale-95 transition-all cursor-pointer"
-              >
-                <div className="w-11 h-11 rounded-xl bg-[#9acbff]/30 text-[#00609b] flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[22px]">query_stats</span>
-                </div>
-                <span className="text-[11px] font-bold text-[#191c1e] text-center leading-tight">
-                  Rekap Sekolah
-                </span>
+                Buka Export Wizard
               </button>
             </div>
 
@@ -587,7 +573,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 <h3 className="text-[14px] font-bold text-[#191c1e]">
                   Status Validasi Rombel Hari Ini
                 </h3>
-                <span className="text-[11px] text-[#00609b] font-bold">36 Kelas</span>
+                <span className="text-[11px] text-[#00609b] font-bold">36 Rombel</span>
               </div>
 
               <div className="divide-y divide-[#eceef0]">
@@ -612,11 +598,360 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 ))}
               </div>
             </div>
-          </>
-        ) : (
-          /* ─── TAB 2: ADVANCED SUPERADMIN CONTROL SUITE (POINT 6) ─── */
-          <div className="flex flex-col gap-4">
-            {/* Global School Policy Config */}
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* TAB 2: PUSAT EXPORT KEHADIRAN EXCEL (FITUR INTI PERMINTAAN USER)    */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'export' && (
+          <div className="flex flex-col gap-4 animate-fadeIn">
+            {/* Header Wizard Banner */}
+            <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#eceef0] flex flex-col gap-3">
+              <div className="flex items-center justify-between pb-2 border-b border-[#eceef0]">
+                <div className="flex items-center gap-2">
+                  <span className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[18px]">
+                    📥
+                  </span>
+                  <div>
+                    <h3 className="text-[14px] font-bold text-[#191c1e]">
+                      Pusat Export Kehadiran Excel (.xlsx)
+                    </h3>
+                    <p className="text-[11px] text-[#707882]">
+                      Laporan multi-periode dengan 2 basis perhitungan resmi
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleOpenExportWizard('bulanan', 'harian')}
+                  className="px-3 py-1.5 rounded-xl bg-[#00609b] text-white text-[11px] font-bold flex items-center gap-1 hover:bg-[#0079c2] transition-all cursor-pointer shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-[15px]">tune</span>
+                  <span>Kustomisasi Export</span>
+                </button>
+              </div>
+
+              {/* Basis A Card: Kehadiran Harian (Min 1x Hadir) */}
+              <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-lg bg-[#006947] text-white flex items-center justify-center text-[12px] font-bold">
+                      A
+                    </span>
+                    <div>
+                      <h4 className="text-[12px] font-extrabold text-emerald-950">
+                        Basis 1: Kehadiran Harian (Minimal 1x Hadir per Hari)
+                      </h4>
+                      <p className="text-[10px] text-emerald-800">
+                        Siswa dihitung hadir (✓) jika tercatat setidaknya absen 1x dalam jadwal pelajaran hari tersebut.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[9px] bg-[#6ffbbe]/40 text-[#006947] font-bold px-2 py-0.5 rounded-md hidden sm:inline">
+                    Standar Absensi Sekolah
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDailyExport('mingguan')}
+                    className="p-2.5 bg-white rounded-xl border border-emerald-200 hover:border-[#006947] hover:shadow-xs flex flex-col items-center text-center transition-all cursor-pointer"
+                  >
+                    <span className="text-[14px]">📅</span>
+                    <span className="text-[11px] font-bold text-emerald-950 mt-0.5">Mingguan</span>
+                    <span className="text-[9px] text-[#707882]">6 Hari Efektif</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDailyExport('bulanan')}
+                    className="p-2.5 bg-white rounded-xl border border-emerald-200 hover:border-[#006947] hover:shadow-xs flex flex-col items-center text-center transition-all cursor-pointer"
+                  >
+                    <span className="text-[14px]">🗓️</span>
+                    <span className="text-[11px] font-bold text-emerald-950 mt-0.5">Bulanan</span>
+                    <span className="text-[9px] text-[#707882]">26 Hari Kerja</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDailyExport('3bulan')}
+                    className="p-2.5 bg-white rounded-xl border border-emerald-200 hover:border-[#006947] hover:shadow-xs flex flex-col items-center text-center transition-all cursor-pointer"
+                  >
+                    <span className="text-[14px]">📊</span>
+                    <span className="text-[11px] font-bold text-emerald-950 mt-0.5">3 Bulan</span>
+                    <span className="text-[9px] text-[#707882]">Triwulan</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDailyExport('semester')}
+                    className="p-2.5 bg-white rounded-xl border border-emerald-200 hover:border-[#006947] hover:shadow-xs flex flex-col items-center text-center transition-all cursor-pointer"
+                  >
+                    <span className="text-[14px]">🎓</span>
+                    <span className="text-[11px] font-bold text-emerald-950 mt-0.5">1 Semester</span>
+                    <span className="text-[9px] text-[#707882]">6 Bulan Penuh</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDailyExport('kelas')}
+                    className="p-2.5 bg-white rounded-xl border border-emerald-200 hover:border-[#006947] hover:shadow-xs flex flex-col items-center text-center col-span-2 sm:col-span-1 transition-all cursor-pointer"
+                  >
+                    <span className="text-[14px]">🏫</span>
+                    <span className="text-[11px] font-bold text-emerald-950 mt-0.5">1 Kelas</span>
+                    <span className="text-[9px] text-[#707882]">Rombel Setahun</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Basis B Card: Berdasarkan Guru & Mapel */}
+              <div className="p-4 bg-sky-50/60 rounded-2xl border border-sky-200 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-lg bg-[#00609b] text-white flex items-center justify-center text-[12px] font-bold">
+                      B
+                    </span>
+                    <div>
+                      <h4 className="text-[12px] font-extrabold text-[#001d34]">
+                        Basis 2: Berdasarkan Guru &amp; Mata Pelajaran
+                      </h4>
+                      <p className="text-[10px] text-[#004a79]">
+                        Rekap kehadiran siswa spesifik per jam pertemuan yang diampu guru mata pelajaran tertentu (16 Pertemuan).
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[9px] bg-sky-100 text-[#00609b] font-bold px-2 py-0.5 rounded-md hidden sm:inline">
+                    Evaluasi Guru Mapel
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                  {teachers.slice(0, 3).map((t, idx) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => handleQuickTeacherExport(idx)}
+                      className="p-2.5 bg-white rounded-xl border border-sky-200 hover:border-[#00609b] hover:shadow-xs flex items-center gap-2 text-left transition-all cursor-pointer"
+                    >
+                      <div className="w-7 h-7 rounded-full bg-[#00609b]/10 text-[#00609b] flex items-center justify-center text-[12px] font-bold shrink-0">
+                        👨‍🏫
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-[#191c1e] truncate">{t.name}</p>
+                        <p className="text-[9px] text-[#707882] truncate">{t.subject}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenExportWizard('semester', 'guru')}
+                    className="text-[11px] text-[#00609b] hover:text-[#00487a] font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Pilih guru lainnya di Export Wizard</span>
+                    <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* TAB 3: DATA SISWA & GURU (MASTER DATA & EXCEL IMPORT/EXPORT)       */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'data' && (
+          <div className="flex flex-col gap-4 animate-fadeIn">
+            {/* Action Tools Card */}
+            <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#eceef0] flex flex-col gap-4">
+              <div className="flex items-center justify-between pb-2 border-b border-[#eceef0]">
+                <div className="flex items-center gap-2">
+                  <span className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-[18px]">
+                    👥
+                  </span>
+                  <div>
+                    <h3 className="text-[14px] font-bold text-[#191c1e]">
+                      Manajemen Data Siswa &amp; Dewan Guru
+                    </h3>
+                    <p className="text-[11px] text-[#707882]">
+                      Sinkronisasi dan mutasi data rombel SMKN 1 Sorong
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsAddTeacherOpen(true)}
+                  className="p-3 bg-[#f7f9fb] hover:bg-purple-50 rounded-2xl border border-[#eceef0] hover:border-purple-300 flex flex-col items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[20px]">person_add</span>
+                  </div>
+                  <span className="text-[11px] font-bold text-[#191c1e] text-center">
+                    + Tambah Guru
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsAddStudentOpen(true)}
+                  className="p-3 bg-[#f7f9fb] hover:bg-sky-50 rounded-2xl border border-[#eceef0] hover:border-sky-300 flex flex-col items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-sky-100 text-[#00609b] flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[20px]">group_add</span>
+                  </div>
+                  <span className="text-[11px] font-bold text-[#191c1e] text-center">
+                    + Tambah Siswa
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportStudentExcel}
+                  className="p-3 bg-[#f7f9fb] hover:bg-emerald-50 rounded-2xl border border-[#eceef0] hover:border-emerald-300 flex flex-col items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 text-[#006947] flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[20px]">download</span>
+                  </div>
+                  <span className="text-[11px] font-bold text-[#191c1e] text-center">
+                    Ekspor Roster Siswa
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => studentFileInputRef.current?.click()}
+                  className="p-3 bg-[#f7f9fb] hover:bg-amber-50 rounded-2xl border border-[#eceef0] hover:border-amber-300 flex flex-col items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[20px]">upload</span>
+                  </div>
+                  <span className="text-[11px] font-bold text-[#191c1e] text-center">
+                    Impor Excel Siswa
+                  </span>
+                </button>
+              </div>
+
+              {/* Current Teacher Directory Table */}
+              <div className="pt-2 border-t border-[#eceef0]">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-[12px] font-bold text-[#191c1e]">
+                    Daftar Guru Terdaftar ({teachers.length})
+                  </h4>
+                  <span className="text-[10px] text-[#707882]">Tahun Ajaran 2026/2027</span>
+                </div>
+                <div className="divide-y divide-[#eceef0] max-h-56 overflow-y-auto border border-[#eceef0] rounded-2xl">
+                  {teachers.map((t) => (
+                    <div key={t.id} className="p-2.5 flex items-center justify-between text-[11px]">
+                      <div className="min-w-0">
+                        <p className="font-bold text-[#191c1e] truncate">{t.name}</p>
+                        <p className="text-[10px] text-[#707882]">NIP: {t.nip} • {t.subject}</p>
+                      </div>
+                      <span className="text-[10px] bg-[#f2f4f6] text-[#404751] px-2 py-0.5 rounded-md font-semibold shrink-0">
+                        {t.room || 'Ruang Guru'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* TAB 4 (ADMIN ONLY): JADWAL & PENGUMUMAN                            */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {!isSuperadmin && activeTab === 'jadwal' && (
+          <div className="flex flex-col gap-4 animate-fadeIn">
+            <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#eceef0] flex flex-col gap-3">
+              <h3 className="text-[14px] font-bold text-[#191c1e] flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#00609b]">event_note</span>
+                <span>Manajemen Jadwal Pelajaran &amp; Pengumuman</span>
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={onOpenScheduleManager}
+                  className="p-3 bg-[#f7f9fb] hover:bg-sky-50 rounded-2xl border border-[#eceef0] flex items-center gap-3 transition-all cursor-pointer text-left"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-sky-100 text-[#00609b] flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[20px]">edit_calendar</span>
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-bold text-[#191c1e]">Editor Jadwal</p>
+                    <p className="text-[10px] text-[#707882]">Atur slot JP &amp; guru</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onOpenPrintModal}
+                  className="p-3 bg-[#f7f9fb] hover:bg-sky-50 rounded-2xl border border-[#eceef0] flex items-center gap-3 transition-all cursor-pointer text-left"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-[#d1e4ff] text-[#0761a2] flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[20px]">print</span>
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-bold text-[#191c1e]">Cetak Format Resmi</p>
+                    <p className="text-[10px] text-[#707882]">Pratinjau lembar A4</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onOpenNotifications}
+                  className="p-3 bg-[#f7f9fb] hover:bg-emerald-50 rounded-2xl border border-[#eceef0] flex items-center gap-3 transition-all cursor-pointer text-left"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-[#6ffbbe]/30 text-[#006947] flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[20px]">campaign</span>
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-bold text-[#191c1e]">Siarkan Pengumuman</p>
+                    <p className="text-[10px] text-[#707882]">Broadcast ke siswa &amp; guru</p>
+                  </div>
+                </button>
+              </div>
+
+              {/* Import/Export Jadwal Bar */}
+              <div className="p-3 bg-[#f7f9fb] rounded-2xl border border-[#eceef0] flex items-center justify-between gap-2 mt-2">
+                <div>
+                  <p className="text-[12px] font-bold text-[#191c1e]">Sinkronisasi Jadwal Excel</p>
+                  <p className="text-[10px] text-[#707882]">Impor slot rombel massal dari format Excel</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleExportScheduleExcel}
+                    className="px-3 py-1.5 bg-white border border-[#eceef0] text-[#00609b] text-[11px] font-bold rounded-xl hover:bg-[#cfe4ff]/40 transition-all cursor-pointer"
+                  >
+                    Ekspor
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scheduleFileInputRef.current?.click()}
+                    className="px-3 py-1.5 bg-[#00609b] text-white text-[11px] font-bold rounded-xl hover:bg-[#0079c2] transition-all cursor-pointer"
+                  >
+                    Impor
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* TAB 4 (SUPERADMIN ONLY): KEBIJAKAN SEKOLAH (ROOT)                  */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {isSuperadmin && activeTab === 'kebijakan' && (
+          <div className="flex flex-col gap-4 animate-fadeIn">
             <div className="bg-white rounded-3xl p-5 shadow-sm border border-purple-200 flex flex-col gap-3">
               <div className="flex items-center justify-between pb-2 border-b border-[#eceef0]">
                 <div className="flex items-center gap-2">
@@ -625,7 +960,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   </span>
                   <div>
                     <h3 className="text-[14px] font-bold text-[#191c1e]">
-                      Konfigurasi Kebijakan Sekolah (Root)
+                      Konfigurasi Kebijakan Sekolah (Root Level 0)
                     </h3>
                     <p className="text-[11px] text-[#707882]">Parameter JP dan toleransi presensi</p>
                   </div>
@@ -655,13 +990,20 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 </div>
 
                 <div className="p-3 bg-[#f7f9fb] rounded-2xl border border-[#eceef0]">
-                  <p className="text-[10px] text-[#707882] uppercase font-bold">Database Cloud</p>
-                  <p className="text-[15px] font-extrabold text-emerald-600 mt-0.5">Supabase Active</p>
-                  <p className="text-[10px] text-[#707882]">1.000 Slot Terkoneksi</p>
+                  <p className="text-[10px] text-[#707882] uppercase font-bold">Aturan Hadir Harian</p>
+                  <p className="text-[15px] font-extrabold text-[#006947] mt-0.5">Min. 1x Sesi JP</p>
+                  <p className="text-[10px] text-[#707882]">Basis Kehadiran Harian</p>
                 </div>
               </div>
             </div>
+          </div>
+        )}
 
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* TAB 5 (SUPERADMIN ONLY): KEAMANAN, AKUN & AUDIT LOG ROOT           */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {isSuperadmin && activeTab === 'keamanan' && (
+          <div className="flex flex-col gap-4 animate-fadeIn">
             {/* Mass Account & Credentials Manager */}
             <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#eceef0] flex flex-col gap-3">
               <div className="flex items-center justify-between">
@@ -671,9 +1013,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   </span>
                   <div>
                     <h3 className="text-[14px] font-bold text-[#191c1e]">
-                      Manajemen Akun Guru &amp; Siswa
+                      Manajemen Akun &amp; Kredensial Pengguna
                     </h3>
-                    <p className="text-[11px] text-[#707882]">Otoritas reset kredensial massal</p>
+                    <p className="text-[11px] text-[#707882]">Otoritas reset kredensial root</p>
                   </div>
                 </div>
               </div>
@@ -723,9 +1065,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   </span>
                   <div>
                     <h3 className="text-[14px] font-bold text-[#191c1e]">
-                      Audit Log Keamanan &amp; Aktivitas
+                      Audit Log Keamanan &amp; Aktivitas Sistem
                     </h3>
-                    <p className="text-[11px] text-[#707882]">Pencatatan real-time perubahan sistem</p>
+                    <p className="text-[11px] text-[#707882]">Pencatatan real-time perubahan data dan percobaan autentikasi</p>
                   </div>
                 </div>
                 <span className="text-[10px] bg-sky-100 text-sky-800 font-bold px-2 py-0.5 rounded-full">
@@ -783,7 +1125,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-bold uppercase text-[#404751]">Nama Lengkap & Gelar</label>
+                <label className="text-[11px] font-bold uppercase text-[#404751]">Nama Lengkap &amp; Gelar</label>
                 <input
                   type="text"
                   required
@@ -1006,6 +1348,17 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* ─── EXPORT KEHADIRAN MODAL WIZARD ─── */}
+      <ExportKehadiranModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        students={students}
+        teachers={teachers}
+        defaultPeriod={modalDefaultPeriod}
+        defaultBasis={modalDefaultBasis}
+        onSuccess={(msg) => showFeedback(msg)}
+      />
 
       {/* Floating feedback toast */}
       {toastFeedback && (

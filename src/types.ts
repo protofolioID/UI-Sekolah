@@ -55,3 +55,34 @@ export interface NotificationItem {
   type: 'attendance' | 'schedule' | 'broadcast';
   targetAudience?: 'semua' | 'guru' | 'siswa';
 }
+
+// ─── Export Kehadiran Types ───
+export type ExportPeriod = 'mingguan' | 'bulanan' | '3bulan' | 'semester' | 'kelas';
+export type ExportBasis = 'harian' | 'guru';
+
+export interface ExportConfig {
+  period: ExportPeriod;
+  basis: ExportBasis;
+  kelas: string;
+  guruId?: string;
+  guruName?: string;
+  startDate?: string;
+  endDate?: string;
+  semester?: 'ganjil' | 'genap';
+  tahunAjaran?: string;
+}
+
+// ─── Login Security Types ───
+export interface LoginAttempt {
+  timestamp: string;
+  username: string;
+  success: boolean;
+  userAgent?: string;
+}
+
+export interface SecurityConfig {
+  maxAttempts: number;
+  lockoutDurations: Record<number, number>; // attempts -> seconds
+  captchaThreshold: number;
+}
+

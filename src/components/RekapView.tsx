@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Student } from '../types';
 import { exportAttendanceRecapToExcel, exportWeeklyAttendanceRecapToExcel } from '../utils/excelHelper';
-import { INITIAL_STUDENTS, STUDENT_DAILY_ATTENDANCE } from '../data/mockData';
+import { INITIAL_STUDENTS, INITIAL_TEACHERS, STUDENT_DAILY_ATTENDANCE } from '../data/mockData';
+import { ExportKehadiranModal } from './ExportKehadiranModal';
 
 interface UserSession {
   username: string;
@@ -30,6 +31,7 @@ export const RekapView: React.FC<RekapViewProps> = ({
   const [selectedWeek, setSelectedWeek] = useState('Minggu 2 (8 - 14 Okt)');
   const [selectedMonth, setSelectedMonth] = useState('Oktober 2026');
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const classList = ['XII TKJ 1', 'XII DKV 1', 'XII RPL 1', 'XI TKJ 2'];
   const weekList = [
@@ -216,15 +218,26 @@ export const RekapView: React.FC<RekapViewProps> = ({
                   </span>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={handleExportClassExcel}
-                className="px-3.5 py-2 rounded-xl bg-[#00609b] hover:bg-[#0079c2] text-white text-[12px] font-bold shadow-xs flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
-                title="Unduh format spreadsheet mingguan"
-              >
-                <span className="material-symbols-outlined text-[17px]">file_download</span>
-                <span>Ekspor Excel Mingguan</span>
-              </button>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleExportClassExcel}
+                  className="px-3 py-1.5 rounded-xl bg-[#00609b] hover:bg-[#0079c2] text-white text-[11px] font-bold shadow-xs flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                  title="Unduh format spreadsheet mingguan"
+                >
+                  <span className="material-symbols-outlined text-[15px]">file_download</span>
+                  <span>Mingguan</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsExportModalOpen(true)}
+                  className="px-3 py-1.5 rounded-xl bg-white border border-[#00609b] text-[#00609b] hover:bg-[#cfe4ff]/30 text-[11px] font-bold shadow-xs flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                  title="Pusat Export Excel (Semua Periode: Bulanan, 3 Bulan, Semester, Guru)"
+                >
+                  <span className="material-symbols-outlined text-[15px]">tune</span>
+                  <span>Semua Periode</span>
+                </button>
+              </div>
             </div>
 
             {/* 4 Metric Pills - Strictly Synced */}
@@ -320,6 +333,14 @@ export const RekapView: React.FC<RekapViewProps> = ({
             <span className="material-symbols-outlined text-[18px]">print</span>
             <span>Cetak Rekap Presensi Rombel (PDF)</span>
           </button>
+
+          {/* Export Kehadiran Modal Wizard */}
+          <ExportKehadiranModal
+            isOpen={isExportModalOpen}
+            onClose={() => setIsExportModalOpen(false)}
+            students={students}
+            teachers={INITIAL_TEACHERS}
+          />
         </div>
       </div>
     );
