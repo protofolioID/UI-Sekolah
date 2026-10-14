@@ -6,5 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+/*.cjs
+/*.sql
+/*.csv
+/*.js
 
-.vercel

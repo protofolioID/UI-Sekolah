@@ -12,15 +12,19 @@ import {
   exportDailyCheckAttendanceExcel,
   exportByTeacherAttendanceExcel,
 } from '../utils/excelHelper';
-import { ScheduleSlot, Student, Teacher, ExportPeriod, ExportBasis } from '../types';
-import { INITIAL_TEACHERS } from '../data/mockData';
+import { ScheduleSlot, Student, Teacher, ExportPeriod, ExportBasis, NotificationItem } from '../types';
+import { INITIAL_TEACHERS, INITIAL_SCHEDULES, NOTIFICATIONS } from '../data/adminMockData';
 import { ExportKehadiranModal } from './ExportKehadiranModal';
+import { ScheduleModal } from './ScheduleModal';
+import { PrintModal } from './PrintModal';
+import { NotificationsModal } from './NotificationsModal';
 
 interface AdminDashboardViewProps {
-  onOpenScheduleManager: () => void;
-  onOpenPrintModal: () => void;
-  onOpenNotifications: () => void;
+  onOpenScheduleManager?: () => void;
+  onOpenPrintModal?: () => void;
+  onOpenNotifications?: () => void;
   roleTitle?: string;
+  initialRoleMode?: 'admin' | 'superadmin';
   schedules?: ScheduleSlot[];
   students?: Student[];
   teachers?: Teacher[];
@@ -29,6 +33,7 @@ interface AdminDashboardViewProps {
   onAddTeacher?: (newTeacher: Teacher) => void;
   onAddStudent?: (newStudent: Student) => void;
   onResetUserPassword?: (username: string, newPass: string) => void;
+  onLogout?: () => void;
 }
 
 export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
@@ -36,7 +41,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   onOpenPrintModal,
   onOpenNotifications,
   roleTitle = 'Tata Usaha / Operator',
-  schedules = [],
+  initialRoleMode,
+  schedules = INITIAL_SCHEDULES,
   students = [],
   teachers = INITIAL_TEACHERS,
   onImportSchedules,
@@ -44,10 +50,32 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   onAddTeacher,
   onAddStudent,
   onResetUserPassword,
+  onLogout: _onLogout,
 }) => {
-  const isSuperadmin =
+  const isSuperDefault =
+    initialRoleMode === 'superadmin' ||
     roleTitle.toLowerCase().includes('super') ||
     roleTitle.toLowerCase().includes('kepala');
+
+  // Interactive toggle: user can switch between 'admin' (Admin TU) and 'superadmin' (Super Admin)
+  const [activeRoleMode, setActiveRoleMode] = useState<'admin' | 'superadmin'>(
+    isSuperDefault ? 'superadmin' : 'admin'
+  );
+
+  const isSuperadmin = activeRoleMode === 'superadmin';
+  const displayRoleTitle = isSuperadmin ? 'Kepala Sekolah / IT Admin' : 'Tata Usaha / Operator';
+
+  // Internal schedules & notifications
+  const [internalSchedules, setInternalSchedules] = useState<ScheduleSlot[]>(
+    schedules && schedules.length > 0 ? schedules : INITIAL_SCHEDULES
+  );
+  const [internalNotifications, setInternalNotifications] = useState<NotificationItem[]>(NOTIFICATIONS);
+  const [editingSlot, setEditingSlot] = useState<ScheduleSlot | null>(null);
+
+  // Modal open states
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   // ─── TAB NAVIGATION ───
   // Admin: dashboard, export, data, jadwal
@@ -297,7 +325,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[11px] text-[#cfe4ff] font-semibold uppercase tracking-wider truncate">
-                  {roleTitle}
+                  {displayRoleTitle}
                 </span>
                 <span className="w-1 h-1 rounded-full bg-[#cfe4ff]/60" />
                 <span className="text-[11px] text-white/80 shrink-0">SMKN 1 Sorong</span>
@@ -319,8 +347,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             <button
               aria-label="Notifikasi"
               type="button"
-              onClick={onOpenNotifications}
-              className="relative w-10 h-10 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/25 active:scale-95 transition-all shadow-sm shrink-0"
+              onClick={onOpenNotifications || (() => setIsNotificationsOpen(true))}
+              className="relative w-10 h-10 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/25 active:scale-95 transition-all shadow-sm shrink-0 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[22px]">notifications</span>
               <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#ffdad6]" />
@@ -328,8 +356,56 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           </div>
         </div>
 
+        {/* ─── ROLE MODE SWITCHER PILL (ADMIN TU vs SUPER ADMIN) ─── */}
+        <div className="relative z-10 mt-3.5 flex items-center justify-between bg-black/25 backdrop-blur-md rounded-2xl p-1 border border-white/20 shadow-xs">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveRoleMode('admin');
+                if (activeTab === 'kebijakan' || activeTab === 'keamanan') {
+                  setActiveTab('dashboard');
+                }
+                showFeedback('Beralih ke Tampilan: Admin TU (Tata Usaha)');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeRoleMode === 'admin'
+                  ? 'bg-white text-[#00609b] shadow-sm'
+                  : 'text-white/80 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <span>🛠️</span>
+              <span>Admin TU</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveRoleMode('superadmin');
+                if (activeTab === 'jadwal') {
+                  setActiveTab('dashboard');
+                }
+                showFeedback('Beralih ke Tampilan: Super Admin (Kepala Sekolah / IT)');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeRoleMode === 'superadmin'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm'
+                  : 'text-white/80 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <span>👑</span>
+              <span>Super Admin</span>
+            </button>
+          </div>
+          <div className="flex items-center gap-2 pr-2 text-white">
+            <span className="text-[10px] text-white/90 font-semibold hidden sm:inline">
+              Mode Aktif: {activeRoleMode === 'superadmin' ? 'Root Level 0' : 'Operator TU'}
+            </span>
+            <span className="w-2 h-2 rounded-full bg-[#6ffbbe] animate-pulse" />
+          </div>
+        </div>
+
         {/* Live System Indicator */}
-        <div className="relative z-10 mt-3 flex items-center justify-between bg-black/20 backdrop-blur-md rounded-xl py-1.5 px-3">
+        <div className="relative z-10 mt-2.5 flex items-center justify-between bg-black/20 backdrop-blur-md rounded-xl py-1.5 px-3">
           <div className="flex items-center gap-1.5 text-white">
             <span className="material-symbols-outlined text-[16px] text-[#6ffbbe]">
               dns
@@ -728,7 +804,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
-                  {teachers.slice(0, 3).map((t, idx) => (
+                  {teachers.slice(0, 3).map((t: Teacher, idx: number) => (
                     <button
                       key={t.id}
                       type="button"
@@ -848,7 +924,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   <span className="text-[10px] text-[#707882]">Tahun Ajaran 2026/2027</span>
                 </div>
                 <div className="divide-y divide-[#eceef0] max-h-56 overflow-y-auto border border-[#eceef0] rounded-2xl">
-                  {teachers.map((t) => (
+                  {teachers.map((t: Teacher) => (
                     <div key={t.id} className="p-2.5 flex items-center justify-between text-[11px]">
                       <div className="min-w-0">
                         <p className="font-bold text-[#191c1e] truncate">{t.name}</p>
@@ -879,7 +955,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
                 <button
                   type="button"
-                  onClick={onOpenScheduleManager}
+                  onClick={onOpenScheduleManager || (() => setIsScheduleModalOpen(true))}
                   className="p-3 bg-[#f7f9fb] hover:bg-sky-50 rounded-2xl border border-[#eceef0] flex items-center gap-3 transition-all cursor-pointer text-left"
                 >
                   <div className="w-10 h-10 rounded-xl bg-sky-100 text-[#00609b] flex items-center justify-center shrink-0">
@@ -893,7 +969,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
                 <button
                   type="button"
-                  onClick={onOpenPrintModal}
+                  onClick={onOpenPrintModal || (() => setIsPrintModalOpen(true))}
                   className="p-3 bg-[#f7f9fb] hover:bg-sky-50 rounded-2xl border border-[#eceef0] flex items-center gap-3 transition-all cursor-pointer text-left"
                 >
                   <div className="w-10 h-10 rounded-xl bg-[#d1e4ff] text-[#0761a2] flex items-center justify-center shrink-0">
@@ -907,7 +983,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
                 <button
                   type="button"
-                  onClick={onOpenNotifications}
+                  onClick={onOpenNotifications || (() => setIsNotificationsOpen(true))}
                   className="p-3 bg-[#f7f9fb] hover:bg-emerald-50 rounded-2xl border border-[#eceef0] flex items-center gap-3 transition-all cursor-pointer text-left"
                 >
                   <div className="w-10 h-10 rounded-xl bg-[#6ffbbe]/30 text-[#006947] flex items-center justify-center shrink-0">
@@ -1353,11 +1429,67 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       <ExportKehadiranModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
-        students={students}
+        students={students && students.length > 0 ? students : []}
         teachers={teachers}
         defaultPeriod={modalDefaultPeriod}
         defaultBasis={modalDefaultBasis}
         onSuccess={(msg) => showFeedback(msg)}
+      />
+
+      {/* ─── SCHEDULE SLOT MODAL ─── */}
+      <ScheduleModal
+        isOpen={isScheduleModalOpen}
+        editingSlot={editingSlot}
+        onClose={() => setIsScheduleModalOpen(false)}
+        onSave={(slotData) => {
+          if (editingSlot) {
+            setInternalSchedules((prev) =>
+              prev.map((s) => (s.id === editingSlot.id ? { ...s, ...slotData } : s))
+            );
+            showFeedback(`Jadwal "${slotData.subject}" berhasil diperbarui!`);
+          } else {
+            const newSlot: ScheduleSlot = {
+              id: `sch-${Date.now()}`,
+              day: slotData.day || 'Selasa',
+              jpStart: slotData.jpStart || 1,
+              jpEnd: slotData.jpEnd || 2,
+              jpLabel: slotData.jpLabel || 'JP 1 - 2',
+              timeRange: slotData.timeRange || '07:15 - 08:45 WIT',
+              subject: slotData.subject || 'Mapel Baru',
+              teacher: slotData.teacher || 'Guru Pengampu',
+              room: slotData.room || 'Lab Komputer 2',
+              badgeType: 'normal',
+            };
+            setInternalSchedules((prev) => [...prev, newSlot]);
+            if (onImportSchedules) onImportSchedules([newSlot]);
+            showFeedback('Jadwal baru berhasil ditambahkan!');
+          }
+          setIsScheduleModalOpen(false);
+          setEditingSlot(null);
+        }}
+      />
+
+      {/* ─── OFFICIAL PRINTABLE TIMETABLE MODAL ─── */}
+      <PrintModal
+        isOpen={isPrintModalOpen}
+        schedules={internalSchedules}
+        onClose={() => setIsPrintModalOpen(false)}
+      />
+
+      {/* ─── ANNOUNCEMENTS & NOTIFICATIONS MODAL ─── */}
+      <NotificationsModal
+        isOpen={isNotificationsOpen}
+        notifications={internalNotifications}
+        onClose={() => setIsNotificationsOpen(false)}
+        onMarkAllAsRead={() => {
+          setInternalNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+          showFeedback('Semua pengumuman & notifikasi ditandai telah dibaca.');
+        }}
+        userRole={isSuperadmin ? 'superadmin' : 'admin'}
+        onAddNotification={(newNotif) => {
+          setInternalNotifications((prev) => [newNotif, ...prev]);
+          showFeedback('Pengumuman baru berhasil disiarkan ke seluruh dewan sekolah!');
+        }}
       />
 
       {/* Floating feedback toast */}

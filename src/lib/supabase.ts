@@ -16,18 +16,22 @@ export type StatusAbsen = 'Hadir' | 'Izin' | 'Sakit' | 'Alfa' | 'Terlambat';
 export type StatusValidasi = 'draft' | 'tervalidasi';
 export type StatusStreak = 'aktif' | 'padam' | 'beku';
 export type HariEnum = 'Senin' | 'Selasa' | 'Rabu' | 'Kamis' | 'Jumat' | 'Sabtu';
-export type RoleEnum = 'superadmin' | 'admin' | 'guru' | 'siswa';
+export type RoleEnum = 'siswa' | 'guru' | 'wali_kelas' | 'guru_piket' | 'operator';
 
 export interface Profile {
   id: string;
   username: string;
   nama: string;
   role: RoleEnum;
+  is_sekretaris: boolean;
   kelas_id: string | null;
   must_change_password: boolean;
   phone?: string;
   avatar_url?: string;
   kelas?: { id: string; nama: string } | null;
+  is_wali_kelas?: boolean;
+  wali_kelas?: { id: string; nama: string } | null;
+  is_guru_piket?: boolean;
 }
 
 export interface Kelas {

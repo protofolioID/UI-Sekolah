@@ -1,451 +1,563 @@
-import React, { useState, useEffect } from 'react';
-import { Header } from './components/Header';
-import { BottomNav, TabType } from './components/BottomNav';
-import { LoginScreen } from './components/LoginScreen';
-import { PublicScheduleView } from './components/PublicScheduleView';
-import { BerandaView } from './components/BerandaView';
-import { JadwalView } from './components/JadwalView';
-import { AbsensiView } from './components/AbsensiView';
-import { RekapView } from './components/RekapView';
-import { ProfilView, getUserAvatar } from './components/ProfilView';
-import { GuruDashboardView } from './components/GuruDashboardView';
-import { AdminDashboardView } from './components/AdminDashboardView';
-import { ScheduleModal } from './components/ScheduleModal';
-import { AttachmentModal } from './components/AttachmentModal';
-import { LencanaModal } from './components/LencanaModal';
-import { IzinModal } from './components/IzinModal';
-import { NotificationsModal } from './components/NotificationsModal';
-import { PrintModal } from './components/PrintModal';
+import { supabase } from './lib/supabase';
+import React, { useState } from 'react';
 import {
-  INITIAL_STUDENTS,
-  INITIAL_SCHEDULES,
-  INITIAL_TEACHERS,
-  NOTIFICATIONS,
-} from './data/mockData';
-import { Student, ScheduleSlot, AttendanceStatus, NotificationItem, Teacher } from './types';
-import { exportAttendanceRecapToExcel } from './utils/excelHelper';
+  INITIAL_CLASS_SUMMARY,
+  INITIAL_STUDENTS as SAMAKAN_INITIAL_STUDENTS,
+  INITIAL_TEACHER_ALERT,
+  USER_PROFILES,
+} from './data/samakan/mockData';
+import { INITIAL_STUDENTS as OLD_INITIAL_STUDENTS } from './data/students';
+import { Student, AttendanceStatus } from './types/attendance';
+import { Navbar } from './components/Navbar';
+import { BottomNav } from './components/BottomNavSamakan';
+import { Toast, ToastData } from './components/Toast';
+import { HomeScreen } from './components/HomeScreenSamakan';
+import { LoginScreen } from './components/LoginScreen';
+import { JadwalScreen } from './components/JadwalScreen';
+import { ProfileScreen } from './components/ProfileScreenSamakan';
+import { EditProfileScreen } from './components/EditProfileScreen';
+import { ChangePasswordScreen } from './components/ChangePasswordScreen';
+import { UserProfile, ClassAttendanceSummary, StudentAttendance, TeacherCallAlert, UserRole } from './types';
+import { useAuth } from './hooks/useAuth';
+import { getWewenangPengabsenHariIni } from './utils/perangkatKelasManager';
 
-type UserRole = 'siswa' | 'guru' | 'admin' | 'superadmin';
-
-interface UserSession {
-  username: string;
-  role: UserRole;
-  nama: string;
-}
+// Old Attendance Screen
+import { AttendanceScreen } from './components/AttendanceScreen';
+import { SubmitModal } from './components/SubmitModal';
+import { AttachmentModal } from './components/AttachmentModal';
+import { ValidasiGuruScreen } from './components/ValidasiGuruScreen';
+import { WaliKelasDashboard } from './components/WaliKelasDashboard';
+import { GuruPiketDashboard } from './components/GuruPiketDashboard';
+import { OperatorDashboard } from './components/OperatorDashboard';
+import { AdminDashboardView } from './components/AdminDashboardView';
+import { AdminPortal } from './components/admin/AdminPortal';
 
 export default function App() {
-  // ─── AUTH STATE ───
-  const [session, setSession] = useState<UserSession | null>(null);
-  const [isPublicSchedule, setIsPublicSchedule] = useState(false);
+  const auth = useAuth();
 
-  // ─── NAV STATE ───
-  const [currentTab, setCurrentTab] = useState<TabType>('beranda');
-  const [isAbsensiOpen, setIsAbsensiOpen] = useState(false);
+  // --- UI State ---
+  const [isGuestPublic, setIsGuestPublic] = useState(false);
+  const [avatarOverride, setAvatarOverride] = useState<string | null>(null);
+  const [currentTab, setCurrentTab] = useState<'beranda' | 'jadwal' | 'absensi' | 'profil' | 'edit-profil' | 'ganti-password' | 'wali-kelas' | 'guru-piket'>('beranda');
+  const [adminInspectingRole, setAdminInspectingRole] = useState<'guru' | 'siswa' | null>(null);
+  const [toast, setToast] = useState<ToastData | null>(null);
+  
+  // Samakan state
+  const [classSummary, setClassSummary] = useState<ClassAttendanceSummary>(INITIAL_CLASS_SUMMARY);
+  const [samakanStudents, setSamakanStudents] = useState<StudentAttendance[]>(SAMAKAN_INITIAL_STUDENTS);
+  const [teacherAlert, setTeacherAlert] = useState<TeacherCallAlert>(INITIAL_TEACHER_ALERT);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
-  // ─── DATA STATE ───
-  const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
-  const [teachers, setTeachers] = useState<Teacher[]>(INITIAL_TEACHERS);
-  const [schedules, setSchedules] = useState<ScheduleSlot[]>(INITIAL_SCHEDULES);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(NOTIFICATIONS);
+  // Old Attendance state
+  const [oldStudents, setOldStudents] = useState<Student[]>(() => {
+    const saved = localStorage.getItem('smkn1_attendance_students_v2');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const seen = new Set<string>();
+          const deduped = parsed.filter(s => {
+            const key = (s.name || '').trim().toUpperCase();
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+          return deduped.map((s, idx) => {
+            const numStr = String(idx + 1).padStart(2, '0');
+            return { ...s, absentNo: numStr, studentNo: numStr };
+          });
+        }
+      } catch (e) { console.error(e); }
+    }
+    return OLD_INITIAL_STUDENTS;
+  });
+  const [isDraftSavedOffline, setIsDraftSavedOffline] = useState<boolean>(false);
+  const [previousOldStudentsState, setPreviousOldStudentsState] = useState<Student[] | null>(null);
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState<boolean>(false);
+  const [selectedStudentForAttachment, setSelectedStudentForAttachment] = useState<Student | null>(null);
+  const [attachmentModalMode, setAttachmentModalMode] = useState<'view' | 'edit'>('view');
 
-  // ─── MODALS ───
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
-  const [editingSlot, setEditingSlot] = useState<ScheduleSlot | null>(null);
-  const [selectedStudentAttachment, setSelectedStudentAttachment] = useState<Student | null>(null);
-  const [isLencanaModalOpen, setIsLencanaModalOpen] = useState(false);
-  const [isIzinModalOpen, setIsIzinModalOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-
-  // ─── TOAST ───
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 2800);
+  const showToast = (title: string, description: string, type: 'success' | 'warning' | 'info' | 'error' = 'success') => {
+    setToast({ title, description, type });
+    setTimeout(() => setToast(null), 4000);
   };
 
-  // ─── LIVE SUPABASE CONNECTIVITY ───
-  useEffect(() => {
-    async function checkSupabaseConnection() {
-      try {
-        const SUPABASE_URL = 'https://cfcdqmajoazxcoxgnoka.supabase.co';
-        const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmY2RxbWFqb2F6eGNveGdub2thIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NjUzNzEsImV4cCI6MjEwNjM0MTM3MX0.wLxxXMBd0q8HZM0HGhfGb0yMuA-a3daofIHMK8Bxjmc';
-        const headers = { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` };
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id&limit=1`, { headers });
-        if (res.ok) {
-          // Connected live
-        }
-      } catch (err) {
-        console.warn('Supabase check fallback:', err);
+  const supabaseRole: UserRole = (auth.userRole as UserRole) ?? 'siswa';
+  const currentUser: UserProfile = auth.profile
+    ? {
+        ...USER_PROFILES[supabaseRole] ?? USER_PROFILES.siswa,
+        id: auth.profile.id,
+        name: auth.profile.nama,
+        phone: auth.profile.phone || '',
+        avatarUrl: avatarOverride || auth.profile.avatar_url || (USER_PROFILES[supabaseRole] ?? USER_PROFILES.siswa).avatarUrl,
+        role: supabaseRole,
+        roleTitle:
+          supabaseRole === 'superadmin' ? 'Kepala Sekolah / IT Admin'
+          : (supabaseRole === 'operator' || (supabaseRole as any) === 'admin') ? 'Tata Usaha / Operator'
+          : auth.profile.is_wali_kelas ? `Wali Kelas ${auth.profile.wali_kelas?.nama || ''}`
+          : auth.profile.is_guru_piket ? 'Guru Piket'
+          : supabaseRole === 'guru' ? 'Guru Mata Pelajaran'
+          : auth.profile.is_sekretaris ? 'Sekretaris Kelas'
+          : 'Siswa',
+        identifier: auth.profile.username,
+        kelas_id: auth.profile.kelas_id || auth.profile.wali_kelas?.id || 'e88128be-8fc3-4973-8d69-00ef17571626',
+        kelas: (auth.profile as any).kelas || (auth.profile.wali_kelas ? { id: auth.profile.wali_kelas.id, nama: auth.profile.wali_kelas.nama } : { id: 'e88128be-8fc3-4973-8d69-00ef17571626', nama: 'XII TKJ 1' }),
+        is_wali_kelas: auth.profile.is_wali_kelas,
+        wali_kelas: auth.profile.wali_kelas ? { id: auth.profile.wali_kelas.id, nama: auth.profile.wali_kelas.nama } : undefined,
+        is_guru_piket: auth.profile.is_guru_piket,
+      }
+    : {
+        ...USER_PROFILES.siswa,
+        kelas_id: 'e88128be-8fc3-4973-8d69-00ef17571626',
+        kelas: { id: 'e88128be-8fc3-4973-8d69-00ef17571626', nama: 'XII TKJ 1' },
+      };
+
+  // Status Kehadiran Hari Ini & Wewenang Pengabsen Harian Siswa
+  const todayStatusMap = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    oldStudents.forEach(s => {
+      map[s.id] = s.status;
+    });
+    return map;
+  }, [oldStudents]);
+
+  const wewenangPengabsen = React.useMemo(() => {
+    const targetKelasId = currentUser.kelas_id || 'e88128be-8fc3-4973-8d69-00ef17571626';
+    return getWewenangPengabsenHariIni(
+      targetKelasId,
+      currentUser.id,
+      todayStatusMap,
+      oldStudents.map(s => ({ id: s.id, nama: s.name }))
+    );
+  }, [currentUser.kelas_id, currentUser.id, todayStatusMap, oldStudents]);
+
+  // Load real students for currentUser.kelas_id
+  React.useEffect(() => {
+    const targetKelasId = currentUser.kelas_id;
+    if (!targetKelasId) return;
+
+    async function loadClassStudents() {
+      const { data: dbStudents } = await supabase
+        .from('profiles')
+        .select('id, nama, username')
+        .eq('kelas_id', targetKelasId)
+        .eq('role', 'siswa')
+        .order('nama', { ascending: true });
+
+      if (dbStudents && dbStudents.length > 0) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const { data: todayAbsen } = await supabase
+          .from('absen_harian')
+          .select('siswa_id, status, keterangan')
+          .eq('kelas_id', targetKelasId)
+          .eq('tanggal', todayStr);
+
+        const statusMap: Record<string, any> = {};
+        (todayAbsen || []).forEach((a: any) => {
+          const s = a.status === 'Hadir' ? 'H' : a.status === 'Sakit' ? 'S' : a.status === 'Izin' ? 'I' : a.status === 'Bolos' ? 'B' : 'A';
+          statusMap[a.siswa_id] = { status: s, note: a.keterangan };
+        });
+
+        // Deduplicate students by name to guarantee exact unique list
+        const seenNames = new Set<string>();
+        const uniqueDbStudents = dbStudents.filter(s => {
+          const key = (s.nama || '').trim().toUpperCase();
+          if (seenNames.has(key)) return false;
+          seenNames.add(key);
+          return true;
+        });
+
+        const mapped: Student[] = uniqueDbStudents.map((s, idx) => {
+          const numStr = String(idx + 1).padStart(2, '0');
+          const existing = statusMap[s.id];
+          return {
+            id: s.id,
+            absentNo: numStr,
+            name: s.nama,
+            studentNo: numStr,
+            nisn: s.username.replace(/^s_?/, ''),
+            status: existing ? existing.status : 'H',
+            note: existing?.note || undefined,
+            avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(s.nama)}&background=005fa0&color=fff`,
+          };
+        });
+
+        setOldStudents(mapped);
+        localStorage.setItem('smkn1_attendance_students_v2', JSON.stringify(mapped));
       }
     }
 
-    checkSupabaseConnection();
-  }, []);
+    loadClassStudents();
+  }, [currentUser.kelas_id]);
 
-  // ─── LOGIN HANDLER ───
-  const handleLogin = (username: string, role?: UserRole, nama?: string) => {
-    const roleMap: Record<string, { role: UserRole; nama: string }> = {
-      's0097658890': { role: 'siswa', nama: 'Cindy Laura' },
-      '196812291993031011': { role: 'guru', nama: 'Budi Santoso, S.Kom' },
-      'admin_demo': { role: 'admin', nama: 'Administrator SMKN 1' },
-      'superadmin_sorong': { role: 'superadmin', nama: 'Superadmin SIAP' },
-    };
-    const match = roleMap[username];
-    const finalRole = role || match?.role || 'siswa';
-    const finalNama = nama || match?.nama || username;
-    setSession({ username, role: finalRole, nama: finalNama });
-    setIsPublicSchedule(false);
-    setCurrentTab('beranda');
-    setIsAbsensiOpen(false);
-    showToast(`Selamat datang, ${finalNama}!`);
-  };
+  const handleLogin = async (_role: UserRole, identifier?: string, password?: string) => {
+    if (!identifier || !password) return;
+    setLoginError(null);
 
-  const handlePublicSchedule = () => {
-    setIsPublicSchedule(true);
-    setSession(null);
-  };
-
-  const handleBackToLogin = () => {
-    setIsPublicSchedule(false);
-  };
-
-  const handleLogout = () => {
-    setSession(null);
-    setIsPublicSchedule(false);
-    setCurrentTab('beranda');
-    setIsAbsensiOpen(false);
-  };
-
-  // ─── ATTENDANCE HANDLERS ───
-  const handleUpdateStudentStatus = (id: string, status: AttendanceStatus) => {
-    setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
-    showToast(`Status kehadiran siswa diperbarui: ${status}`);
-  };
-
-  const handleSetAllHadir = () => {
-    setStudents((prev) => prev.map((s) => ({ ...s, status: 'Hadir' })));
-    showToast('Semua 34 siswa berhasil diset HADIR!');
-  };
-
-  const handleSaveAndLockPresensi = () => {
-    showToast('💾 Presensi dikunci & disinkronkan ke SIAP SMKN 1 Sorong!');
-  };
-
-  // ─── SCHEDULE CRUD ───
-  const handleOpenAddSchedule = () => {
-    setEditingSlot(null);
-    setIsScheduleModalOpen(true);
-  };
-
-  const handleOpenEditSchedule = (slot: ScheduleSlot) => {
-    setEditingSlot(slot);
-    setIsScheduleModalOpen(true);
-  };
-
-  const handleDeleteSchedule = (id: string, subject: string) => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus slot pelajaran "${subject}"?`)) {
-      setSchedules((prev) => prev.filter((s) => s.id !== id));
-      showToast(`Jadwal "${subject}" berhasil dihapus.`);
-    }
-  };
-
-  const handleSaveSchedule = (slotData: Partial<ScheduleSlot>) => {
-    if (editingSlot) {
-      setSchedules((prev) =>
-        prev.map((s) => (s.id === editingSlot.id ? { ...s, ...slotData } : s))
-      );
-      showToast(`Jadwal "${slotData.subject}" berhasil diperbarui!`);
+    const result = await auth.login(identifier, password);
+    if (result.error) {
+      setLoginError(result.error);
     } else {
-      const newSlot: ScheduleSlot = {
-        id: `sch-${Date.now()}`,
-        day: slotData.day || 'Selasa',
-        jpStart: slotData.jpStart || 1,
-        jpEnd: slotData.jpEnd || 2,
-        jpLabel: slotData.jpLabel || 'JP 1 - 2',
-        timeRange: slotData.timeRange || '07:15 - 08:45 WIT',
-        subject: slotData.subject || 'Mapel Baru',
-        teacher: slotData.teacher || 'Guru Pengampu',
-        room: slotData.room || 'Lab Komputer 2',
-        badgeType: 'normal',
-      };
-      setSchedules((prev) => [...prev, newSlot]);
-      showToast(`Jadwal baru berhasil ditambahkan!`);
-    }
-    setIsScheduleModalOpen(false);
-  };
-
-  const handleImportSchedules = (newSchedules: ScheduleSlot[]) => {
-    setSchedules((prev) => [...prev, ...newSchedules]);
-    showToast(`${newSchedules.length} jadwal berhasil diimpor dari file Excel!`);
-  };
-
-  const handleImportStudents = (newStudents: Student[]) => {
-    setStudents(newStudents);
-    showToast(`${newStudents.length} data siswa berhasil diimpor dari file Excel!`);
-  };
-
-  const handleAddTeacher = (newTeacher: Teacher) => {
-    setTeachers((prev) => [newTeacher, ...prev]);
-    showToast(`Guru ${newTeacher.name} berhasil ditambahkan!`);
-  };
-
-  const handleAddStudent = (newStudent: Student) => {
-    setStudents((prev) => [...prev, newStudent]);
-    showToast(`Siswa ${newStudent.name} (${newStudent.kelas || 'Rombel'}) berhasil ditambahkan!`);
-  };
-
-  const handleResetUserPassword = (username: string, _newPass: string) => {
-    showToast(`Kata sandi akun ${username} berhasil disetel ulang!`);
-  };
-
-  // ─── NOTIFICATIONS ───
-  const handleMarkAllNotificationsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    showToast('Semua notifikasi ditandai telah dibaca.');
-  };
-
-  const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
-
-  // ─── IZIN ───
-  const handleIzinSubmit = (type: string, _reason: string) => {
-    setIsIzinModalOpen(false);
-    showToast(`Pengajuan ${type} berhasil dikirim ke Guru Mapel & Tata Usaha!`);
-  };
-
-  // ─── DOWNLOAD RECAP ───
-  const handleDownloadRecapPDF = () => {
-    exportAttendanceRecapToExcel(students, 'XII TKJ 1', 'Oktober 2026');
-    showToast('Rekap presensi berhasil diekspor ke Excel (.xlsx)');
-  };
-
-  // ─── HEADER TITLE ───
-  const getHeaderTitle = () => {
-    if (isAbsensiOpen) return 'Lembar Absensi Kelas';
-    if (currentTab === 'jadwal') return 'Jadwal Pelajaran';
-    if (currentTab === 'rekap') return 'Rekap Presensi';
-    if (currentTab === 'profil') return 'Profil';
-    return 'Beranda';
-  };
-
-  const isBackVisible = isAbsensiOpen || currentTab !== 'beranda';
-  const handleHeaderBack = () => {
-    if (isAbsensiOpen) {
-      setIsAbsensiOpen(false);
-    } else if (currentTab !== 'beranda') {
       setCurrentTab('beranda');
+      showToast('Login Berhasil!', `Selamat datang, ${result.profile?.nama ?? identifier}!`, 'success');
     }
   };
 
-  // ─── PUBLIC SCHEDULE VIEW ───
-  if (isPublicSchedule) {
+  const handleOpenPublicSchedule = () => {
+    setIsGuestPublic(true);
+    setCurrentTab('jadwal');
+  };
+
+  const handleLogout = async () => {
+    await auth.logout();
+    setIsGuestPublic(false);
+    setCurrentTab('beranda');
+    setLoginError(null);
+  };
+
+  // --- Samakan Handlers ---
+  const handleSendTeacherCall = () => {
+    setTeacherAlert((prev) => ({ ...prev, isActive: true, timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIT', statusResponse: 'pending' }));
+  };
+
+  const handleSubmitMorningDraft = (updatedStudents: StudentAttendance[]) => {
+    setSamakanStudents(updatedStudents);
+    const presentCount = updatedStudents.filter((s) => s.morningStatus === 'hadir').length;
+    setClassSummary((prev) => ({ ...prev, present: presentCount, sick: updatedStudents.filter(s => s.morningStatus === 'sakit').length, permitted: updatedStudents.filter(s => s.morningStatus === 'izin').length, unexcused: updatedStudents.filter(s => s.morningStatus === 'alfa').length, validationStatus: 'menunggu_acc' }));
+  };
+
+  // --- Old Attendance Handlers ---
+  const handleUpdateStudentStatus = (studentId: string, status: AttendanceStatus) => {
+    setOldStudents((prev) =>
+      prev.map((student) => {
+        if (student.id === studentId) {
+          return { ...student, status, warningAlert: status === 'B' ? (student.warningAlert || 'Terdeteksi Bolos: Siswa tidak berada di kelas.') : undefined };
+        }
+        return student;
+      })
+    );
+    setIsDraftSavedOffline(false);
+  };
+
+
+  const handleSaveOfflineDraft = () => {
+    localStorage.setItem('smkn1_attendance_students_v2', JSON.stringify(oldStudents));
+    setIsDraftSavedOffline(true);
+    showToast('Tersimpan', 'Draft presensi berhasil disimpan secara lokal (Offline)!', 'success');
+  };
+
+  const handleConfirmSubmit = async () => {
+    localStorage.setItem('smkn1_attendance_students_v2', JSON.stringify(oldStudents));
+    setIsSubmitModalOpen(false);
+
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const targetKelasId = currentUser.kelas_id;
+      if (targetKelasId) {
+        const rows = oldStudents.map(s => {
+          const dbStatus = s.status === 'H' ? 'Hadir' : s.status === 'S' ? 'Sakit' : s.status === 'I' ? 'Izin' : s.status === 'B' ? 'Bolos' : 'Alfa';
+          return {
+            tanggal: todayStr,
+            siswa_id: s.id,
+            kelas_id: targetKelasId,
+            status: dbStatus,
+            keterangan: s.note || null,
+            diinput_oleh: currentUser.id,
+            status_validasi: 'draft' as const
+          };
+        });
+        await supabase.from('absen_harian').upsert(rows, { onConflict: 'tanggal,siswa_id' });
+      }
+    } catch (e) {
+      console.error('Error saving absen_harian:', e);
+    }
+
+    showToast('Berhasil', 'Draft berhasil dikirim untuk validasi!', 'success');
+  };
+
+  const handleSaveNote = (studentId: string, note: string, fileName?: string) => {
+    setOldStudents((prev) =>
+      prev.map((s) => {
+        if (s.id === studentId) {
+          return {
+            ...s,
+            note,
+            badge: 'Baru Diubah',
+            attachment: s.attachment
+              ? { ...s.attachment, fileName: fileName || s.attachment.fileName }
+              : { type: 'doctor_note', title: 'Keterangan Khusus', fileName: fileName || 'Keterangan.jpg', date: new Date().toLocaleDateString('id-ID') },
+          };
+        }
+        return s;
+      })
+    );
+    setSelectedStudentForAttachment(null);
+    showToast('Berhasil', 'Keterangan dan lampiran berhasil diperbarui.', 'success');
+  };
+
+  // --- Loading ---
+  if (auth.loading) {
     return (
-      <PublicScheduleView
-        schedules={schedules}
-        onBackToLogin={handleBackToLogin}
-        onPrint={() => setIsPrintModalOpen(true)}
-      />
+      <div className="flex items-center justify-center min-h-screen bg-[#f8f9ff]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-[#005fa0] border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-sm text-slate-500 font-medium">Memuat aplikasi...</span>
+        </div>
+      </div>
     );
   }
 
-  // ─── NOT LOGGED IN → SHOW LOGIN ───
-  if (!session) {
+  // --- Login Screen ---
+  if (!auth.isLoggedIn && !isGuestPublic) {
     return (
-      <LoginScreen
-        onLogin={handleLogin}
-        onOpenPublicSchedule={handlePublicSchedule}
-      />
-    );
-  }
-
-  const role = session.role;
-  const isTeacherOrAbove = role === 'guru' || role === 'admin' || role === 'superadmin';
-  const isAdmin = role === 'admin' || role === 'superadmin';
-
-  // Derive registered class for student
-  const currentStudentObj = role === 'siswa'
-    ? students.find(
-        (s) =>
-          s.nis === session.username ||
-          s.name.toLowerCase() === session.nama.toLowerCase() ||
-          `s${s.nis}` === session.username
-      )
-    : undefined;
-  const studentClass = currentStudentObj?.kelas || 'XII TKJ 1';
-
-  // ─── MAIN APP ───
-  return (
-    <div className="bg-slate-100 min-h-screen text-[#191c1e] flex flex-col items-center justify-start font-sans selection:bg-[#77b7fe] selection:text-[#00487a]">
-      {/* Shell Container: Full-width on mobile, responsive modern adaptive layout on tablet/desktop */}
-      <div className="w-full max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-5xl min-h-screen bg-[#f7f9fb] shadow-2xl relative flex flex-col transition-all duration-200">
-        {/* Top Application Bar */}
-        <Header
-          title={getHeaderTitle()}
-          showBack={isBackVisible}
-          onBack={handleHeaderBack}
-          onNotificationClick={() => setIsNotificationsOpen(true)}
-          onProfileClick={() => {
-            setIsAbsensiOpen(false);
-            setCurrentTab('profil');
-          }}
-          unreadCount={unreadNotificationsCount}
-          avatarUrl={getUserAvatar(session)}
+      <>
+        <LoginScreen
+          onLoginSuccess={handleLogin}
+          onOpenPublicSchedule={handleOpenPublicSchedule}
         />
+        {loginError && (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold max-w-xs text-center">
+            Ã¢ÂÅ’ {loginError}
+          </div>
+        )}
+        <Toast toast={toast} onClose={() => setToast(null)} />
+      </>
+    );
+  }
 
-        {/* Main View Area */}
-        <main className="flex-1 flex flex-col relative w-full pt-16">
-        {isAbsensiOpen ? (
-          <AbsensiView
-            students={students}
-            onUpdateStatus={handleUpdateStudentStatus}
-            onSetAllHadir={handleSetAllHadir}
-            onSaveAndLock={handleSaveAndLockPresensi}
-            onBack={() => setIsAbsensiOpen(false)}
-            onOpenAttachment={(student) => setSelectedStudentAttachment(student)}
-          />
-        ) : currentTab === 'beranda' ? (
-          // Role-based home view
-          isAdmin ? (
+  // --- Admin TU & Super Admin Portal (UI-Sekolah) ---
+  const isAdminOrSuperadmin =
+    currentUser.role === 'operator' ||
+    (currentUser.role as any) === 'admin' ||
+    currentUser.role === 'superadmin';
+
+  if (isAdminOrSuperadmin && !isGuestPublic && !adminInspectingRole) {
+    return (
+      <AdminPortal
+        session={{
+          username: currentUser.identifier || 'admin_demo',
+          role: currentUser.role === 'superadmin' ? 'superadmin' : 'admin',
+          nama: currentUser.name || (currentUser.role === 'superadmin' ? 'Superadmin SIAP' : 'Tata Usaha / Operator'),
+        }}
+        onLogout={handleLogout}
+        onSwitchToAppRole={(targetRole) => {
+          setAdminInspectingRole(targetRole);
+          setCurrentTab('beranda');
+          showToast('Mode Inspeksi Aktif', `Beralih ke tampilan simulasi ${targetRole.toUpperCase()}`, 'info');
+        }}
+      />
+    );
+  }
+
+  const effectiveRole: UserRole = adminInspectingRole || supabaseRole;
+  const activeUser: UserProfile = adminInspectingRole
+    ? {
+        ...currentUser,
+        role: adminInspectingRole,
+        roleTitle: adminInspectingRole === 'guru' ? 'Guru Mapel (Inspeksi Admin)' : 'Siswa (Inspeksi Admin)',
+      }
+    : currentUser;
+
+  // --- Main App ---
+  return (
+    <div className="min-h-screen w-full overflow-x-hidden bg-surface flex flex-col justify-between font-body text-on-surface">
+      {adminInspectingRole && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white px-4 py-2 text-xs font-bold flex items-center justify-between shadow-lg border-b border-white/20">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Mode Inspeksi {adminInspectingRole === 'guru' ? '👨‍🏫 Guru' : '🎓 Siswa'} • Operator: {currentUser.name}</span>
+          </div>
+          <button
+            onClick={() => setAdminInspectingRole(null)}
+            className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 active:scale-95 cursor-pointer shadow-xs border border-white/20"
+          >
+            <span className="material-symbols-outlined notranslate text-[14px]">arrow_back</span>
+            <span>Kembali ke Portal Admin</span>
+          </button>
+        </div>
+      )}
+
+      {currentTab !== 'edit-profil' && currentTab !== 'ganti-password' && (
+        <Navbar
+          currentTab={currentTab}
+          user={activeUser}
+          onSelectRole={() => {}}
+          onOpenHtmlModal={() => {}}
+          onNavigateToTab={(tab) => setCurrentTab(tab as any)}
+        />
+      )}
+
+      {isGuestPublic && (
+        <div className="fixed top-16 left-0 right-0 z-30 bg-amber-500 text-amber-950 px-4 py-1.5 text-xs font-bold flex items-center justify-between shadow-sm">
+          <span>Mode Tamu: Jadwal Pelajaran Publik SMKN 1 Sorong</span>
+          <button onClick={() => setIsGuestPublic(false)} className="bg-white/80 hover:bg-white px-2 py-0.5 rounded text-[11px] text-amber-900">Masuk ke Akun</button>
+        </div>
+      )}
+
+      <main className={`flex-1 w-full ${adminInspectingRole ? 'pt-24' : isGuestPublic ? 'pt-24' : 'pt-16'}`}>
+        {currentTab === 'beranda' && (
+          (activeUser.role === 'operator' || (activeUser.role as any) === 'admin' || activeUser.role === 'superadmin') ? (
             <AdminDashboardView
-              onOpenScheduleManager={handleOpenAddSchedule}
-              onOpenPrintModal={() => setIsPrintModalOpen(true)}
-              onOpenNotifications={() => setIsNotificationsOpen(true)}
-              roleTitle={role === 'superadmin' ? 'Kepala Sekolah / IT Admin' : 'Tata Usaha / Operator'}
-              schedules={schedules}
-              students={students}
-              teachers={teachers}
-              onImportSchedules={handleImportSchedules}
-              onImportStudents={handleImportStudents}
-              onAddTeacher={handleAddTeacher}
-              onAddStudent={handleAddStudent}
-              onResetUserPassword={handleResetUserPassword}
-            />
-          ) : role === 'guru' ? (
-            <GuruDashboardView
-              onOpenAbsensiKelas={(_classId, _className, _subject) => setIsAbsensiOpen(true)}
-              onNavigateToJadwal={() => setCurrentTab('jadwal')}
-              onNavigateToRekap={() => setCurrentTab('rekap')}
-              onOpenNotifications={() => setIsNotificationsOpen(true)}
-              students={students}
+              roleTitle={activeUser.roleTitle}
+              initialRoleMode={activeUser.role === 'superadmin' ? 'superadmin' : 'admin'}
+              onLogout={handleLogout}
             />
           ) : (
-            <BerandaView
-              session={session}
-              onNavigateToJadwal={() => setCurrentTab('jadwal')}
-              onNavigateToRekap={() => setCurrentTab('rekap')}
-              onOpenIzinModal={() => setIsIzinModalOpen(true)}
-              onOpenLencanaModal={() => setIsLencanaModalOpen(true)}
-              onOpenNotifications={() => setIsNotificationsOpen(true)}
+            <HomeScreen
+              user={activeUser}
+              classSummary={classSummary}
+              students={samakanStudents}
+              oldStudents={oldStudents}
+              teacherAlert={teacherAlert}
+              onSendTeacherCall={handleSendTeacherCall}
+              onSubmitMorningDraft={handleSubmitMorningDraft}
+              onNavigateToTab={(tab) => setCurrentTab(tab as any)}
+              onShowToast={showToast}
             />
           )
-        ) : currentTab === 'jadwal' ? (
-          <JadwalView
-            schedules={schedules}
-            onOpenAddModal={handleOpenAddSchedule}
-            onOpenEditModal={handleOpenEditSchedule}
-            onDeleteSlot={handleDeleteSchedule}
-            onPrint={() => setIsPrintModalOpen(true)}
-            onOpenAbsensiKelas={(_slot) => setIsAbsensiOpen(true)}
-            userRole={role}
-            session={session}
-            studentClass={studentClass}
-            onImportSchedules={handleImportSchedules}
+        )}
+
+        {currentTab === 'jadwal' && (
+          activeUser.role === 'operator' ? (
+            <OperatorDashboard
+              user={activeUser}
+              onLogout={handleLogout}
+              onShowToast={showToast}
+              initialTab="jadwal"
+            />
+          ) : (
+            <JadwalScreen onShowToast={showToast} user={activeUser} />
+          )
+        )}
+
+        {currentTab === 'absensi' && (
+          activeUser.role === 'operator' ? (
+            <OperatorDashboard
+              user={activeUser}
+              onLogout={handleLogout}
+              onShowToast={showToast}
+              initialTab="wali_kelas"
+            />
+          ) : effectiveRole === 'siswa' ? (
+              <div className="w-full max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-4xl mx-auto pb-24 px-3 sm:px-4">
+                <AttendanceScreen
+                  readOnly={!wewenangPengabsen.canInputAttendance}
+                  officerInfo={{
+                    canInput: wewenangPengabsen.canInputAttendance,
+                    officerRole: wewenangPengabsen.officerRole,
+                    title: wewenangPengabsen.officerTitle,
+                    name: wewenangPengabsen.activeOfficerName,
+                    reason: wewenangPengabsen.officerReason,
+                    isDelegated: wewenangPengabsen.isDelegated,
+                    hierarchyStep: wewenangPengabsen.hierarchyStep,
+                    sekretarisAbsent: wewenangPengabsen.sekretarisAbsent,
+                    ketuaAbsent: wewenangPengabsen.ketuaAbsent,
+                  }}
+                  classTitle={activeUser.kelas?.nama}
+                  students={oldStudents}
+                  onUpdateStudentStatus={handleUpdateStudentStatus}
+
+                  onOpenSubmitModal={() => setIsSubmitModalOpen(true)}
+                  onSaveOfflineDraft={handleSaveOfflineDraft}
+                  onViewAttachment={(student) => {
+                    setSelectedStudentForAttachment(student);
+                    setAttachmentModalMode('view');
+                  }}
+                  onEditNote={(student) => {
+                    setSelectedStudentForAttachment(student);
+                    setAttachmentModalMode(wewenangPengabsen.canInputAttendance ? 'edit' : 'view');
+                  }}
+                  isDraftSavedOffline={isDraftSavedOffline}
+                  onNavigateHome={() => setCurrentTab('beranda')}
+                  containerWidthClass="w-full"
+                />
+              </div>
+            ) : (
+            <ValidasiGuruScreen
+              user={activeUser}
+              initialClassId={activeUser.kelas_id || 'e88128be-8fc3-4973-8d69-00ef17571626'}
+              onClose={() => setCurrentTab('beranda')}
+              onShowToast={showToast}
+            />
+          )
+        )}
+
+        {currentTab === 'wali-kelas' && (
+          <WaliKelasDashboard
+            user={activeUser}
+            onNavigateHome={() => setCurrentTab('beranda')}
+            onNavigateToTab={(tab) => setCurrentTab(tab as any)}
+            onShowToast={showToast}
           />
-        ) : currentTab === 'rekap' ? (
-          <RekapView
-            onBackToBeranda={() => setCurrentTab('beranda')}
-            onDownloadReport={handleDownloadRecapPDF}
-            userRole={role}
-            session={session}
-            students={students}
+        )}
+
+        {currentTab === 'guru-piket' && (
+          <GuruPiketDashboard
+            user={activeUser}
+            onNavigateHome={() => setCurrentTab('beranda')}
+            onShowToast={showToast}
           />
-        ) : (
-          <ProfilView
-            session={session}
+        )}
+
+        {currentTab === 'edit-profil' && (
+          <EditProfileScreen
+            onBack={() => setCurrentTab('profil')}
+            user={activeUser}
+            onProfileUpdated={(updated) => {
+              if (updated.avatarUrl) {
+                setAvatarOverride(updated.avatarUrl);
+              }
+              if (auth.profile) {
+                if (updated.name) auth.profile.nama = updated.name;
+                if (updated.phone) auth.profile.phone = updated.phone;
+                if (updated.avatarUrl) auth.profile.avatar_url = updated.avatarUrl;
+              }
+            }}
+          />
+        )}
+        {currentTab === 'profil' && (
+          <ProfileScreen
+            user={activeUser}
             onLogout={handleLogout}
-            onOpenLencanaModal={() => setIsLencanaModalOpen(true)}
-            onNavigateToAbsensi={() => setIsAbsensiOpen(true)}
+            onShowToast={showToast}
+            onEditProfile={() => setCurrentTab('edit-profil')}
+              onChangePassword={() => setCurrentTab('ganti-password')}
           />
+        )}
+        {currentTab === 'ganti-password' && (
+          <ChangePasswordScreen onBack={() => setCurrentTab('profil')} />
         )}
       </main>
 
-      {/* Bottom Navigation Bar */}
-      {!isAbsensiOpen && (
+      {currentTab !== 'edit-profil' && currentTab !== 'ganti-password' && (
         <BottomNav
-          activeTab={currentTab}
-          userRole={role}
-          onTabChange={(tab) => {
-            setIsAbsensiOpen(false);
-            setCurrentTab(tab);
-          }}
-          onQuickAbsenClick={() => setIsAbsensiOpen(true)}
+          currentTab={currentTab}
+          onTabChange={(tab) => setCurrentTab(tab as any)}
+          userRole={activeUser.role}
+          pendingValidationCount={classSummary.validationStatus === 'menunggu_acc' ? 1 : 0}
         />
       )}
 
-        {/* Logout FAB (visible on profil tab) */}
-        {currentTab === 'profil' && (
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="fixed bottom-24 right-4 z-50 w-12 h-12 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-rose-600 active:scale-90 transition-all cursor-pointer"
-            aria-label="Keluar"
-          >
-            <span className="material-symbols-outlined text-[22px]">logout</span>
-          </button>
-        )}
-      </div>
+      <Toast toast={toast} onClose={() => setToast(null)} />
 
-      {/* ─── Modals ─── */}
-      <ScheduleModal
-        isOpen={isScheduleModalOpen}
-        editingSlot={editingSlot}
-        onClose={() => setIsScheduleModalOpen(false)}
-        onSave={handleSaveSchedule}
+      {/* Modals for Old Attendance Screen */}
+      <SubmitModal
+        isOpen={isSubmitModalOpen}
+        onClose={() => setIsSubmitModalOpen(false)}
+        students={oldStudents}
+        onConfirmSuccess={handleConfirmSubmit}
       />
-
       <AttachmentModal
-        student={selectedStudentAttachment}
-        onClose={() => setSelectedStudentAttachment(null)}
+        student={selectedStudentForAttachment}
+        mode={attachmentModalMode}
+        isOpen={Boolean(selectedStudentForAttachment)}
+        onClose={() => setSelectedStudentForAttachment(null)}
+        onSaveNote={handleSaveNote}
       />
-
-      <LencanaModal
-        isOpen={isLencanaModalOpen}
-        onClose={() => setIsLencanaModalOpen(false)}
-      />
-
-      <IzinModal
-        isOpen={isIzinModalOpen}
-        onClose={() => setIsIzinModalOpen(false)}
-        onSubmit={handleIzinSubmit}
-      />
-
-      <NotificationsModal
-        isOpen={isNotificationsOpen}
-        notifications={notifications}
-        onClose={() => setIsNotificationsOpen(false)}
-        onMarkAllAsRead={handleMarkAllNotificationsRead}
-        userRole={role}
-        onAddNotification={(newNotif) => {
-          setNotifications((prev) => [newNotif, ...prev]);
-          showToast('Pemberitahuan berhasil disiarkan!');
-        }}
-      />
-
-      <PrintModal
-        isOpen={isPrintModalOpen}
-        schedules={schedules}
-        onClose={() => setIsPrintModalOpen(false)}
-      />
-
-      {/* Toast */}
-      {toastMessage && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#2d3133] text-[#eff1f3] px-4 py-2.5 rounded-full shadow-xl text-[12px] font-semibold flex items-center gap-2 animate-bounceIn border border-white/10">
-          <span className="material-symbols-outlined text-[#6ffbbe] text-[18px]">
-            check_circle
-          </span>
-          <span>{toastMessage}</span>
-        </div>
-      )}
     </div>
   );
 }
+
+
+
+

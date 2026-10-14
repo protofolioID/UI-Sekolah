@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScheduleSlot } from '../types';
-import { ASSETS } from '../data/mockData';
+import { ASSETS } from '../data/adminMockData';
 
 interface PrintModalProps {
   isOpen: boolean;

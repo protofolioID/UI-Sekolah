@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScheduleSlot } from '../types';
-import { JP_TIMES } from '../data/mockData';
+import { JP_TIMES } from '../data/adminMockData';
 
 interface ScheduleModalProps {
   isOpen: boolean;
