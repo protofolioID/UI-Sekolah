@@ -30,6 +30,21 @@ Aplikasi ini dirancang dan dikembangkan untuk Lomba Kejuruan oleh tim siswa SMK 
 
 ---
 
+## 🏆 Berkas & Dokumen Penilaian Lomba (Lengkap 6 Poin Juri)
+
+Sesuai kualifikasi dan *starter-kit* penilaian lomba, seluruh berkas telah disiapkan secara komprehensif:
+
+| No | Syarat Penilaian Juri | Berkas / Tautan Resmi | Deskripsi |
+| :-: | :--- | :--- | :--- |
+| 1 | **Data Tim** | [Tabel Tim Pengembang](#-tim-pengembang-developer-team) | Profil 3 siswa SMKN 1 Sorong (Andhika, Rizal, Prima) |
+| 2 | **Workflow Proyek** | [`WORKFLOW.md`](file:///C:/Users/Nathan/Documents/github/absensi-smkn1-lomba/WORKFLOW.md) | 7 Tahapan Rekayasa Sistem & Metodologi Agile |
+| 3 | **Link Aplikasi Aktif** | [https://absensi-gabungan-main.vercel.app](https://absensi-gabungan-main.vercel.app) | Aplikasi Live di Vercel Edge Network (100% siap uji) |
+| 4 | **Video Singkat Penjelasan** | [`video_presentasi_siakad.mp4`](file:///C:/Users/Nathan/Documents/github/absensi-smkn1-lomba/video_presentasi_siakad.mp4) | Durasi **4:12** (< 5 menit), Voiceover AI, & Foto Profil Tim |
+| 5 | **Flyer / Infografis** | [`REQUIREMENTS-LOMBA.md`](file:///C:/Users/Nathan/Documents/github/absensi-smkn1-lomba/REQUIREMENTS-LOMBA.md#5-flyer--infografis-desain-siap-cetakposting) | Konten copywriting poster 3-step solution siap pakai |
+| 6 | **Dokumentasi & Kebermanfaatan** | [`DOKUMENTASI-KEBERMANFAATAN.md`](file:///C:/Users/Nathan/Documents/github/absensi-smkn1-lomba/DOKUMENTASI-KEBERMANFAATAN.md) | Naskah akademik, analisis dampak, metrik efisiensi waktu |
+
+---
+
 ## 👥 Akun Uji Coba Lomba (100% Data Dummy Bersih — Zero PII Leak)
 
 > [!IMPORTANT]
