@@ -148,9 +148,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           <span>Keluar dari Akun</span>
         </button>
 
-        <p className="text-[11px] text-center text-slate-400 pb-4">
-          SMK Negeri 1 Sorong • Versi Aplikasi 2.4.0
-        </p>
+        <div className="text-center pb-4 space-y-1">
+          <p className="text-[11px] font-semibold text-slate-500">
+            SMK Negeri 1 Sorong • Versi Aplikasi 2.4.0
+          </p>
+          <p className="text-[10px] text-slate-400">
+            Tim Pengembang: Andhika I. N. (XII DKV 1) • Rahmad Rizal F. (XII TKJ 1) • Prima Adi N. S. (XII TKJ 1)
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -222,9 +222,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         </button>
       </div>
 
-      <div className="pb-6 text-center z-10 animate-in fade-in duration-1000 delay-500">
-        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
+      <div className="pb-6 text-center z-10 animate-in fade-in duration-1000 delay-500 max-w-md px-4">
+        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
           SIAKAD v2.0 • SMK Negeri 1 Sorong
+        </p>
+        <p className="text-[10px] text-slate-400 mt-1 font-medium leading-relaxed">
+          Karya Tim: <span className="text-slate-600 font-semibold">Andhika Ivander N.</span> (XII DKV 1) • <span className="text-slate-600 font-semibold">Rahmad Rizal F.</span> (XII TKJ 1) • <span className="text-slate-600 font-semibold">Prima Adi N. S.</span> (XII TKJ 1)
         </p>
       </div>
     </div>

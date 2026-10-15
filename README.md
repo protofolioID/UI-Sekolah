@@ -18,6 +18,18 @@ Aplikasi web multi-peran (RBAC 7-level) dengan sinkronisasi database PostgreSQL 
 
 ---
 
+## 👨‍💻 Tim Pengembang (Developer Team)
+
+Aplikasi ini dirancang dan dikembangkan untuk Lomba Kejuruan oleh tim siswa SMK Negeri 1 Sorong:
+
+| No | Nama Pengembang | Kelas / Rombel | Fokus & Kontribusi Proyek |
+| :-: | :--- | :--- | :--- |
+| 1 | **Andhika Ivander Nathanael** | **XII DKV 1** | UI/UX Designer, Mobile-First Design System, & Frontend |
+| 2 | **RAHMAD RIZAL FADILAH** | **XII TKJ 1** | Fullstack Engineer, Supabase Architecture, & Business Logic |
+| 3 | **PRIMA ADI NUGRAHA SOLTIF** | **XII TKJ 1** | System Analyst, RLS Security Hardening, & Quality Assurance |
+
+---
+
 ## 👥 Akun Uji Coba Lomba (100% Data Dummy Bersih — Zero PII Leak)
 
 > [!IMPORTANT]
