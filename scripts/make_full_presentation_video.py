@@ -31,6 +31,33 @@ def get_font(size: int, bold: bool = False):
     except Exception:
         return ImageFont.load_default()
 
+def draw_multiline_wrapped(draw, text, pos, max_width, font, fill, line_spacing=6, anchor=None):
+    words = text.split(" ")
+    lines = []
+    current_line = ""
+    for w in words:
+        test = f"{current_line} {w}".strip()
+        bbox = draw.textbbox((0, 0), test, font=font)
+        if (bbox[2] - bbox[0]) <= max_width:
+            current_line = test
+        else:
+            if current_line:
+                lines.append(current_line)
+            current_line = w
+    if current_line:
+        lines.append(current_line)
+    
+    x, y = pos
+    for line in lines:
+        bbox = draw.textbbox((0, 0), line, font=font)
+        lh = bbox[3] - bbox[1]
+        if anchor == "mt":
+            draw.text((x, y), line, font=font, fill=fill, anchor="mt")
+        else:
+            draw.text((x, y), line, font=font, fill=fill)
+        y += lh + line_spacing
+    return y
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 1. SCENARIOS & VOICEOVER SCRIPTS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -397,23 +424,15 @@ def generate_slides():
         
         # Description
         draw1.line([(cx + 40, card_y + 450), (cx + card_w - 40, card_y + 450)], fill="#1E3A5F", width=1)
-        # Wrap desc
-        words = m["desc"].split(" ")
-        lines = []
-        cur = ""
-        for w in words:
-            if len(cur + " " + w) < 32:
-                cur = (cur + " " + w).strip()
-            else:
-                lines.append(cur)
-                cur = w
-        if cur:
-            lines.append(cur)
-        
-        dy = card_y + 480
-        for l in lines:
-            draw1.text((cx + card_w // 2, dy), l, font=get_font(18, bold=False), fill="#94A3B8", anchor="mt")
-            dy += 30
+        draw_multiline_wrapped(
+            draw1, m["desc"],
+            (cx + card_w // 2, card_y + 475),
+            max_width=card_w - 80,
+            font=get_font(18, bold=False),
+            fill="#94A3B8",
+            line_spacing=8,
+            anchor="mt"
+        )
 
     s1.save(SLIDES_DIR / "slide_01.png")
     
@@ -429,14 +448,21 @@ def generate_slides():
         ("03", "Beban Rekapitulasi Manual TU", "Staf Tata Usaha harus menginput ulang ribuan lembar kertas absen dari 54 kelas ke format Dapodik/Kemendikbudristek setiap akhir bulan. Proses ini memakan waktu 3-5 hari kerja.", "#3B82F6"),
     ]
     for i, p in enumerate(problems):
-        py = 220 + i * 240
-        draw2.rounded_rectangle([(80, py), (1840, py + 200)], radius=24, fill="#0F213A", outline="#1E3A5F", width=2)
+        py = 220 + i * 245
+        draw2.rounded_rectangle([(80, py), (1840, py + 215)], radius=24, fill="#0F213A", outline="#1E3A5F", width=2)
         # Badge
         draw2.rounded_rectangle([(110, py + 35), (200, py + 125)], radius=18, fill=p[3])
         draw2.text((155, py + 55), p[0], font=get_font(40, bold=True), fill="#FFFFFF", anchor="mt")
         # Text
-        draw2.text((230, py + 40), p[1], font=get_font(32, bold=True), fill="#FFFFFF")
-        draw2.text((230, py + 95), p[2], font=get_font(22, bold=False), fill="#94A3B8")
+        draw2.text((230, py + 35), p[1], font=get_font(30, bold=True), fill="#FFFFFF")
+        draw_multiline_wrapped(
+            draw2, p[2],
+            (230, py + 85),
+            max_width=1540,
+            font=get_font(21, bold=False),
+            fill="#94A3B8",
+            line_spacing=6
+        )
     s2.save(SLIDES_DIR / "slide_02.png")
     
     # ─── SLIDE 3: 4 PILAR SOLUSI ───
@@ -446,10 +472,10 @@ def generate_slides():
     draw3.text((80, 140), "Ekosistem Terintegrasi Memadukan Presensi Digital, Otomasi WhatsApp, dan Sinkronisasi Dapodik", font=get_font(24, bold=False), fill="#34D399")
     
     pillars = [
-        ("📱", "Panggil Guru via WhatsApp", "Panggilan darurat instan berformat resmi dikirim ke nomor WhatsApp guru pengampu saat jam pelajaran kosong.", "#10B981"),
-        ("👥", "Hierarki 4-Tingkat Pengabsen", "Pelimpahan hak absen otomatis: Sekretaris 1 -> Ketua Kelas -> Mandat Wali Kelas -> Guru Mapel.", "#3B82F6"),
-        ("🛡️", "Radar Piket & Deteksi Bolos", "Memantau perbedaan presensi gerbang pagi vs jam pelajaran kejuruan secara real-time.", "#F59E0B"),
-        ("📊", "Rekap Kemendikbud 1-Klik", "Ekspor rekapitulasi bulanan otomatis dalam format Microsoft Excel (.xlsx) dan PDF siap lapor Dapodik.", "#8B5CF6"),
+        ("01", "Panggil Guru via WhatsApp", "Panggilan darurat instan berformat resmi dikirim ke nomor WhatsApp guru pengampu saat jam pelajaran kosong.", "#10B981"),
+        ("02", "Hierarki 4-Tingkat Pengabsen", "Pelimpahan hak absen otomatis: Sekretaris 1 -> Ketua Kelas -> Mandat Wali Kelas -> Guru Mapel.", "#3B82F6"),
+        ("03", "Radar Piket & Deteksi Bolos", "Memantau perbedaan presensi gerbang pagi vs jam pelajaran kejuruan secara real-time.", "#F59E0B"),
+        ("04", "Rekap Kemendikbud 1-Klik", "Ekspor rekapitulasi bulanan otomatis dalam format Microsoft Excel (.xlsx) dan PDF siap lapor Dapodik.", "#8B5CF6"),
     ]
     for i, pil in enumerate(pillars):
         row = i // 2
@@ -457,24 +483,23 @@ def generate_slides():
         bx = 80 + col * 910
         by = 220 + row * 360
         draw3.rounded_rectangle([(bx, by), (bx + 850, by + 320)], radius=24, fill="#0F213A", outline="#1E3A5F", width=2)
-        draw3.text((bx + 40, by + 40), pil[0], font=get_font(60), fill="#FFFFFF")
-        draw3.text((bx + 140, by + 50), pil[1], font=get_font(30, bold=True), fill=pil[3])
-        # Multi-line desc
-        words = pil[2].split(" ")
-        wlines = []
-        cur = ""
-        for w in words:
-            if len(cur + " " + w) < 45:
-                cur = (cur + " " + w).strip()
-            else:
-                wlines.append(cur)
-                cur = w
-        if cur:
-            wlines.append(cur)
-        dy = by + 130
-        for l in wlines:
-            draw3.text((bx + 40, dy), l, font=get_font(22, bold=False), fill="#CBD5E1")
-            dy += 36
+        
+        # Pill number badge
+        draw3.rounded_rectangle([(bx + 35, by + 35), (bx + 115, by + 85)], radius=12, fill=pil[3])
+        draw3.text((bx + 75, by + 46), pil[0], font=get_font(26, bold=True), fill="#FFFFFF", anchor="mt")
+        
+        # Pillar Title
+        draw3.text((bx + 135, by + 45), pil[1], font=get_font(28, bold=True), fill=pil[3])
+        
+        # Multi-line desc with wrapping
+        draw_multiline_wrapped(
+            draw3, pil[2],
+            (bx + 35, by + 115),
+            max_width=780,
+            font=get_font(21, bold=False),
+            fill="#CBD5E1",
+            line_spacing=8
+        )
     s3.save(SLIDES_DIR / "slide_03.png")
 
     # Helper function for live capture slides
@@ -492,29 +517,44 @@ def generate_slides():
                 mw = 420
                 mh = 760
                 resized = cap_img.resize((mw, mh), Image.Resampling.LANCZOS)
-                # Outer phone bezel
                 draw.rounded_rectangle([(100, 200), (100 + mw + 24, 200 + mh + 24)], radius=36, fill="#020617", outline="#38BDF8", width=3)
                 canvas.paste(resized, (112, 212))
-                rx = 600
+                rx = 580
+                avail_w = 1840 - rx
+                card_h = 165
+                step_y = 190
             else:
                 # Frame desktop
-                dw = 1000
-                dh = 600
+                dw = 980
+                dh = 590
                 resized = cap_img.resize((dw, dh), Image.Resampling.LANCZOS)
                 draw.rounded_rectangle([(80, 220), (80 + dw + 20, 220 + dh + 20)], radius=20, fill="#020617", outline="#38BDF8", width=3)
                 canvas.paste(resized, (90, 230))
-                rx = 1140
+                rx = 1120
+                avail_w = 1840 - rx
+                card_h = 180
+                step_y = 205
         else:
             rx = 600
+            avail_w = 1840 - rx
+            card_h = 165
+            step_y = 190
 
         # Points
-        py = 240
+        py = 225
         for pt_title, pt_desc in points:
-            draw.rounded_rectangle([(rx, py), (1840, py + 140)], radius=20, fill="#0F213A", outline="#1E3A5F", width=2)
+            draw.rounded_rectangle([(rx, py), (1840, py + card_h)], radius=20, fill="#0F213A", outline="#1E3A5F", width=2)
             draw.ellipse([(rx + 25, py + 25), (rx + 45, py + 45)], fill="#10B981")
-            draw.text((rx + 65, py + 22), pt_title, font=get_font(26, bold=True), fill="#FFFFFF")
-            draw.text((rx + 65, py + 68), pt_desc, font=get_font(20, bold=False), fill="#94A3B8")
-            py += 170
+            draw.text((rx + 65, py + 20), pt_title, font=get_font(24, bold=True), fill="#FFFFFF")
+            draw_multiline_wrapped(
+                draw, pt_desc,
+                (rx + 65, py + 62),
+                max_width=avail_w - 95,
+                font=get_font(19, bold=False),
+                fill="#94A3B8",
+                line_spacing=6
+            )
+            py += step_y
 
         canvas.save(SLIDES_DIR / f"slide_{slide_num:02d}.png")
 
@@ -595,9 +635,9 @@ def generate_slides():
     draw9.text((80, 140), "Siswa Memegang Kemudi Kendali Penuh — AI Berperan Sebagai Akselerator Cerdas", font=get_font(24, bold=False), fill="#A78BFA")
     
     tech_stacks = [
-        ("Frontend Modern", "React 19 + TypeScript + Vite + Tailwind CSS v4\nAnimasi performa tinggi dengan Motion & Lucide Icons."),
-        ("Cloud Database & Auth", "PostgreSQL Supabase dengan Row Level Security (RLS)\nOtentikasi token JWT aman & isolasi role 4 tingkatan."),
-        ("WhatsApp Gateway", "Node.js WebSocket Baileys WhatsApp Web JS\nQR Pairing Code & direct dispatch wa.me fallback."),
+        ("Frontend Modern", "React 19 + TypeScript + Vite + Tailwind CSS v4. Animasi performa tinggi dengan Motion & Lucide Icons."),
+        ("Cloud Database & Auth", "PostgreSQL Supabase dengan Row Level Security (RLS). Otentikasi token JWT aman & isolasi role 4 tingkatan."),
+        ("WhatsApp Gateway", "Node.js WebSocket Baileys WhatsApp Web JS. QR Pairing Code & direct dispatch wa.me fallback."),
         ("Etika Pemanfaatan AI", "Google Antigravity & Gemini digunakan sebagai asisten coding, perancang skema DB, dan pemeriksa keamanan. Kode 100% dipahami tim."),
     ]
     for i, t in enumerate(tech_stacks):
@@ -605,14 +645,16 @@ def generate_slides():
         col = i % 2
         tx = 80 + col * 910
         ty = 220 + row * 360
-        draw9.rounded_rectangle([(tx, ty), (tx + 850, ty + 310)], radius=24, fill="#0F213A", outline="#1E3A5F", width=2)
-        draw9.text((tx + 40, ty + 40), t[0], font=get_font(32, bold=True), fill="#38BDF8")
-        # lines
-        dlines = t[1].split("\n")
-        dy = ty + 110
-        for dl in dlines:
-            draw9.text((tx + 40, dy), dl, font=get_font(22, bold=False), fill="#CBD5E1")
-            dy += 40
+        draw9.rounded_rectangle([(tx, ty), (tx + 850, ty + 320)], radius=24, fill="#0F213A", outline="#1E3A5F", width=2)
+        draw9.text((tx + 40, ty + 35), t[0], font=get_font(28, bold=True), fill="#38BDF8")
+        draw_multiline_wrapped(
+            draw9, t[1],
+            (tx + 40, ty + 95),
+            max_width=770,
+            font=get_font(21, bold=False),
+            fill="#CBD5E1",
+            line_spacing=8
+        )
     s9.save(SLIDES_DIR / "slide_09.png")
     
     # ─── SLIDE 10: CLOSING ───
@@ -624,17 +666,25 @@ def generate_slides():
     # Big Center Banner
     draw10.rounded_rectangle([(80, 220), (1840, 950)], radius=32, fill="#0F213A", outline="#10B981", width=3)
     
-    draw10.text((960, 280), "SIAKAD v2.0 Telah Online & Siap Digunakan", font=get_font(42, bold=True), fill="#FFFFFF", anchor="mt")
-    draw10.text((960, 350), "🌐 Aplikasi Live: https://absensi-gabungan-main.vercel.app", font=get_font(30, bold=True), fill="#38BDF8", anchor="mt")
-    draw10.text((960, 410), "💻 Kode Sumber: https://github.com/protofolioID/UI-Sekolah", font=get_font(26, bold=False), fill="#94A3B8", anchor="mt")
+    draw10.text((960, 270), "SIAKAD v2.0 Telah Online & Siap Digunakan", font=get_font(40, bold=True), fill="#FFFFFF", anchor="mt")
+    
+    # URL Pill + Link
+    draw10.rounded_rectangle([(340, 350), (450, 395)], radius=10, fill="#0284C7")
+    draw10.text((395, 360), "ONLINE", font=get_font(20, bold=True), fill="#FFFFFF", anchor="mt")
+    draw10.text((470, 360), "https://absensi-gabungan-main.vercel.app", font=get_font(28, bold=True), fill="#38BDF8")
+    
+    # Repo Pill + Link
+    draw10.rounded_rectangle([(340, 420), (450, 465)], radius=10, fill="#475569")
+    draw10.text((395, 430), "GITHUB", font=get_font(20, bold=True), fill="#FFFFFF", anchor="mt")
+    draw10.text((470, 430), "https://github.com/protofolioID/UI-Sekolah", font=get_font(26, bold=False), fill="#94A3B8")
     
     # 3 Member Mini Badges
     draw10.text((960, 520), "Karya Tim Siswa SMK Negeri 1 Sorong:", font=get_font(24, bold=True), fill="#FFFFFF", anchor="mt")
-    draw10.text((960, 570), "Andhika Ivander Nathanael (XII DKV 1) • Rahmad Rizal Fadilah (XII TKJ 1) • Prima Adi Nugraha S. (XII TKJ 1)", font=get_font(26, bold=True), fill="#FCD34D", anchor="mt")
+    draw10.text((960, 565), "Andhika Ivander Nathanael (XII DKV 1) • Rahmad Rizal Fadilah (XII TKJ 1) • Prima Adi Nugraha S. (XII TKJ 1)", font=get_font(25, bold=True), fill="#FCD34D", anchor="mt")
     
-    draw10.rounded_rectangle([(300, 680), (1620, 850)], radius=20, fill="#042F2E", outline="#059669", width=2)
-    draw10.text((960, 720), "“Inovasi Hadir dari Masalah Nyata di Lingkungan Kita Sendiri”", font=get_font(32, bold=True), fill="#34D399", anchor="mt")
-    draw10.text((960, 780), "Terima kasih kepada Dewan Juri atas apresiasi dan penilaian yang diberikan.", font=get_font(22, bold=False), fill="#E2E8F0", anchor="mt")
+    draw10.rounded_rectangle([(260, 680), (1660, 850)], radius=20, fill="#042F2E", outline="#059669", width=2)
+    draw10.text((960, 715), "“Inovasi Hadir dari Masalah Nyata di Lingkungan Kita Sendiri”", font=get_font(32, bold=True), fill="#34D399", anchor="mt")
+    draw10.text((960, 775), "Terima kasih kepada Dewan Juri atas apresiasi dan penilaian yang diberikan.", font=get_font(22, bold=False), fill="#E2E8F0", anchor="mt")
     
     s10.save(SLIDES_DIR / "slide_10.png")
     print("All 10 Full HD slide graphics created successfully!")
