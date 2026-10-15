@@ -97,39 +97,7 @@ export function useAuth() {
     let finalUsername = identifier.trim();
     const cleanLower = finalUsername.toLowerCase();
 
-    // Superadmin bypass / demo root fallback
-    if (cleanLower === 'superadmin' || cleanLower === 'superadmin_sorong' || cleanLower === 'kepsek') {
-      const superProfile: Profile = {
-        id: 'superadmin-root-0',
-        username: 'superadmin_sorong',
-        nama: 'Superadmin SIAP (Kepala Sekolah)',
-        role: 'superadmin' as any,
-        is_sekretaris: false,
-        kelas_id: null,
-        must_change_password: false,
-        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      };
-      setState({ profile: superProfile, loading: false, error: null });
-      return { profile: superProfile, error: null };
-    }
-
-    // Admin TU bypass / demo fallback
-    if (cleanLower === 'tu' || cleanLower === 'admin_demo' || cleanLower === 'admin') {
-      const tuProfile: Profile = {
-        id: 'admin-tu-root-0',
-        username: 'admin_demo',
-        nama: 'Administrator SMKN 1 (Tata Usaha)',
-        role: 'operator' as any,
-        is_sekretaris: false,
-        kelas_id: null,
-        must_change_password: false,
-        avatar_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
-      };
-      setState({ profile: tuProfile, loading: false, error: null });
-      return { profile: tuProfile, error: null };
-    }
-
-    // Resolve name or NISN or TU to username
+    // 1. Resolve name or NISN or username to profile username
     let { data: profileLookup } = await supabase
       .from('profiles')
       .select('username')
@@ -161,11 +129,15 @@ export function useAuth() {
       finalUsername = profileLookup.username;
     }
 
-    const email = `${finalUsername}@smkn1sorong.sch.id`;
+    // 2. Construct authentic Supabase Auth email
+    const email = `${finalUsername.toLowerCase()}@smkn1sorong.sch.id`;
+    
+    // 3. Authenticate with Supabase Auth (server-side password hashing & session management)
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error || !data.user) {
-      const msg = `Gagal masuk (${error?.message || 'Tidak ada akses'}). Pastikan akun sudah dibuat.`;
+      // General error message compliant with Checklist Keamanan (tidak membocorkan detail)
+      const msg = 'Username atau kata sandi tidak valid. Pastikan data akun benar.';
       setState(prev => ({ ...prev, loading: false, error: msg }));
       return { profile: null, error: msg };
     }

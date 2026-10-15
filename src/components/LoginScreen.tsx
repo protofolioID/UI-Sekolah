@@ -15,6 +15,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showRoleHelper, setShowRoleHelper] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,14 +24,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setIsLoading(false);
   };
 
-  const handleQuickOperator = () => {
-    setIdentifier('TU');
-    setPassword('Demo@2025');
-  };
-
-  const handleQuickSuperadmin = () => {
-    setIdentifier('superadmin_sorong');
-    setPassword('Demo@2025');
+  const selectDemoAccount = (u: string, p: string = 'Demo@2025') => {
+    setIdentifier(u);
+    setPassword(p);
+    setShowRoleHelper(false);
   };
 
   return (
@@ -63,26 +60,68 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               Login ke Akun Anda
             </h2>
 
-            {/* Quick Fill Shortcuts for Admin TU & Super Admin */}
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={handleQuickOperator}
-                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-sky-50 text-primary border border-sky-200 hover:bg-sky-100 transition active:scale-95 cursor-pointer"
-                title="Isi Akun Tata Usaha (Admin TU)"
-              >
-                🛠️ TU
-              </button>
-              <button
-                type="button"
-                onClick={handleQuickSuperadmin}
-                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition active:scale-95 cursor-pointer"
-                title="Isi Akun Super Admin"
-              >
-                👑 Super
-              </button>
-            </div>
+            {/* Quick Demo Helper Modal Trigger for Juries / Testers */}
+            <button
+              type="button"
+              onClick={() => setShowRoleHelper(!showRoleHelper)}
+              className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-sky-50 text-primary border border-sky-200 hover:bg-sky-100 transition active:scale-95 cursor-pointer flex items-center gap-1"
+              title="Pilih Akun Penilaian Lomba"
+            >
+              <span>🎯 Akun Uji</span>
+              <span className="material-symbols-outlined text-[14px]">expand_more</span>
+            </button>
           </div>
+
+          {/* Demo Account Selector Drawer */}
+          {showRoleHelper && (
+            <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-2xl animate-in fade-in duration-200">
+              <p className="text-[11px] font-bold text-slate-600 mb-2">Pilih Peran Uji Coba Lomba:</p>
+              <div className="grid grid-cols-2 gap-1.5 text-left">
+                <button
+                  type="button"
+                  onClick={() => selectDemoAccount('tu')}
+                  className="p-1.5 rounded-lg bg-white border border-slate-200 hover:border-primary text-[11px] font-semibold text-slate-700 text-left cursor-pointer transition hover:bg-sky-50"
+                >
+                  🏢 Admin TU (`tu`)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectDemoAccount('budihartono')}
+                  className="p-1.5 rounded-lg bg-white border border-slate-200 hover:border-primary text-[11px] font-semibold text-slate-700 text-left cursor-pointer transition hover:bg-sky-50"
+                >
+                  👨‍🏫 Wali XII RPL 1
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectDemoAccount('dewilestari')}
+                  className="p-1.5 rounded-lg bg-white border border-slate-200 hover:border-primary text-[11px] font-semibold text-slate-700 text-left cursor-pointer transition hover:bg-sky-50"
+                >
+                  👩‍🏫 Guru Mapel RPL
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectDemoAccount('iwansetiawan')}
+                  className="p-1.5 rounded-lg bg-white border border-slate-200 hover:border-primary text-[11px] font-semibold text-slate-700 text-left cursor-pointer transition hover:bg-sky-50"
+                >
+                  👨‍🏫 Wali XII TKJ 1
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectDemoAccount('s0071234006')}
+                  className="p-1.5 rounded-lg bg-white border border-slate-200 hover:border-primary text-[11px] font-semibold text-slate-700 text-left cursor-pointer transition hover:bg-sky-50"
+                >
+                  📝 Sekretaris RPL
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectDemoAccount('s0071234001')}
+                  className="p-1.5 rounded-lg bg-white border border-slate-200 hover:border-primary text-[11px] font-semibold text-slate-700 text-left cursor-pointer transition hover:bg-sky-50"
+                >
+                  🎓 Siswa RPL 1
+                </button>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {/* Input Identifier */}
@@ -98,7 +137,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   type="text"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="Contoh: TU / Nama Siswa / Guru"
+                  placeholder="Contoh: tu / budihartono / s0071234001"
                   className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:font-normal placeholder:text-slate-400"
                   required
                 />
@@ -118,14 +157,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Masukkan kata sandi"
+                  placeholder="Masukkan kata sandi akun"
                   className="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:font-normal placeholder:text-slate-400"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                  className="absolute right-3 p-1 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                  aria-label="Toggle password visibility"
                 >
                   <span className="material-symbols-outlined notranslate text-[20px]">
                     {showPassword ? 'visibility_off' : 'visibility'}
@@ -137,12 +177,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <button
               type="submit"
               disabled={isLoading || !identifier || !password}
-              className="mt-2 w-full py-3.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-sm shadow-lg shadow-primary/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-70 disabled:active:scale-100"
+              className="mt-2 w-full py-3.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-sm shadow-lg shadow-primary/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-70 disabled:active:scale-100 cursor-pointer"
             >
               {isLoading ? (
                 <>
                   <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-                  <span className="tracking-wide">Memeriksa Data...</span>
+                  <span className="tracking-wide">Memverifikasi Sesi...</span>
                 </>
               ) : (
                 <>
@@ -153,23 +193,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </button>
           </form>
 
-          {/* Role info snippet */}
-          <div className="mt-4 pt-3 border-t border-slate-100 text-center flex flex-col gap-1">
-            <p className="text-[11px] text-slate-500">
-              Admin TU login: <strong className="text-primary font-mono">TU</strong> • sandi: <strong className="text-slate-700 font-mono">Demo@2025</strong>
-            </p>
-            <p className="text-[11px] text-purple-700 font-medium">
-              Super Admin login: <strong className="font-mono">superadmin_sorong</strong> • sandi: <strong className="font-mono">Demo@2025</strong>
+          {/* Secure System Notice */}
+          <div className="mt-4 pt-3 border-t border-slate-100 text-center">
+            <p className="text-[11px] text-slate-500 flex items-center justify-center gap-1">
+              <span className="material-symbols-outlined text-[14px] text-emerald-600">verified_user</span>
+              <span>Terproteksi Supabase Auth &amp; Row Level Security</span>
             </p>
           </div>
         </div>
 
         <button
           onClick={onOpenPublicSchedule}
-          className="mt-6 py-2.5 px-5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs backdrop-blur-md transition-all active:scale-95 flex items-center gap-1.5 border border-white/20 animate-in slide-in-from-bottom-8 duration-700 delay-300"
+          className="mt-6 py-2.5 px-5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs backdrop-blur-md transition-all active:scale-95 flex items-center gap-1.5 border border-white/20 animate-in slide-in-from-bottom-8 duration-700 delay-300 cursor-pointer"
         >
           <span className="material-symbols-outlined notranslate text-[16px]">calendar_month</span>
-          <span>Lihat Jadwal Publik Tanpa Login</span>
+          <span>Lihat Jadwal Pelajaran Publik</span>
         </button>
       </div>
 
