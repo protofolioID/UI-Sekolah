@@ -2,9 +2,11 @@ import urllib.request
 import json
 import ssl
 
+import os
+
 ctx = ssl.create_default_context()
-base_url = "https://cfcdqmajoazxcoxgnoka.supabase.co"
-service_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmY2RxbWFqb2F6eGNveGdub2thIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDc2NTM3MSwiZXhwIjoyMTA2MzQxMzcxfQ.BpY-FGEC3NSwv1pbkG8plodFELyuduumyYhiuRRp-kw"
+base_url = os.environ.get("VITE_SUPABASE_URL", "https://cfcdqmajoazxcoxgnoka.supabase.co")
+service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "YOUR_SUPABASE_SERVICE_ROLE_KEY")
 
 headers = {
     "apikey": service_key,
