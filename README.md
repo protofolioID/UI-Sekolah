@@ -1,75 +1,126 @@
-# SIAP SMKN 1 Sorong — Student Hub & Presensi Terpadu
+# 🎓 SIAP SMKN 1 Sorong — Presensi Terpadu & Academic Hub (Edisi Lomba 2026)
 
-> **Aplikasi Presensi Siswa & Student Hub SMKN 1 Sorong Berbantuan AI**  
-> Dibuat untuk Lomba Pengembangan Aplikasi Web SMK Negeri 1 Sorong (September – Oktober 2026).
+> **Sistem Informasi Akademik & Presensi Terpadu Berbasis Web untuk SMK Negeri 1 Sorong**  
+> Dirancang khusus untuk penilaian Lomba Kejuruan / Web Technologies & Software Development (2026).  
+> Repositori Resmi: [https://github.com/protofolioID/UI-Sekolah](https://github.com/protofolioID/UI-Sekolah)
 
 ---
 
-## 🚀 Fitur Utama
-1. **Presensi Harian & Jam Mata Pelajaran (Multi-Tier)**:
-   - Pencatatan draf oleh Sekretaris Kelas dengan sinkronisasi offline-first.
-   - Verifikasi kehadiran real-time oleh Guru Mata Pelajaran (termasuk deteksi status Bolos Mapel).
-   - Validasi resmi oleh Wali Kelas & Guru Piket.
-2. **Jadwal Pelajaran Interaktif**:
-   - Menampilkan jadwal harian aktif dan integrasi ruang laboratorium.
-3. **Portal Admin & Rekapitulasi Otomatis**:
-   - Ekspor laporan presensi resmi dalam format Excel (`.xlsx`) dalam satu klik.
-4. **Indikator Streak Kehadiran**:
-   - Gamifikasi kedisiplinan belajar siswa.
-5. **Keamanan Berlapis (Defense in Depth)**:
-   - Full PostgreSQL Row Level Security (RLS) di Supabase.
-   - Perlindungan anti-privilege escalation & zero hardcoded credentials.
+## 🌟 Ringkasan Eksekutif & Latar Belakang Masalah
+
+SMK Negeri 1 Sorong memiliki 54 rombongan belajar dengan ribuan peserta didik aktif. Kendala utama operasional sekolah meliputi:
+1. **Presensi Manual Kertas Rentan Manipulasi**: Siswa sering menitip absen atau meninggalkan jam pelajaran kedua (bolos mapel).
+2. **Ketiadaan Delegasi Wewenang**: Ketika sekretaris kelas berhalangan hadir atau sakit, lembar absensi sering tertunda atau tidak tercatat.
+3. **Data Terisolasi**: Rekapitulasi bulanan memakan waktu berhari-hari oleh staf Tata Usaha.
+
+**Solusi SIAP SMKN 1 Sorong:**  
+Aplikasi web multi-peran (RBAC 7-level) dengan sinkronisasi database PostgreSQL Supabase real-time, perlindungan keamanan tingkat enterprise (*Row Level Security*), gamifikasi *attendance streak*, dan generator ekspor rekap resmi Excel (`.xlsx`) dalam sekali klik.
+
+---
+
+## 👥 Akun Uji Coba Lomba (100% Data Dummy Bersih — Zero PII Leak)
+
+> [!IMPORTANT]
+> **Seluruh akun pengujian menggunakan kata sandi tunggal:**  
+> 🔑 **`Demo@2025`**  
+> Di layar login, dewan juri cukup mengklik tombol **"🎯 Akun Uji"** di pojok kanan atas form untuk login instan dalam 1 klik.
+
+| Peran | Username / Identifier | Nama Akun | Hak Akses & Tugas Pengujian Juri |
+| :--- | :--- | :--- | :--- |
+| **👑 Super Admin** | `superadmin_sorong` | Superadmin SIAP (Kepala Sekolah) | Meninjau audit keamanan, status 54 rombel, radar kehadiran sekolah, & reset password. |
+| **🏢 Tata Usaha** | `tu` | Operator TU SMKN 1 | Broadcast pengumuman sekolah, manajemen jadwal, dan ekspor rekap Excel (`.xlsx`). |
+| **👨‍🏫 Wali Kelas** | `budihartono` | Budi Hartono, S.Kom. | Wali Kelas XII RPL 1: validasi presensi harian & memantau radar siswa terlambat. |
+| **👨‍🏫 Wali Kelas** | `iwansetiawan` | Iwan Setiawan, S.Kom. | Wali Kelas XII TKJ 1: monitoring rekapitulasi kehadiran kelas jaringan. |
+| **👩‍🏫 Guru Mapel** | `dewilestari` | Dewi Lestari, S.Pd. | Guru Produktif RPL: validasi presensi per jam pelajaran (Lab RPL 2). |
+| **👩‍🏫 Guru Mapel** | `sitinurhaliza` | Siti Nurhaliza, M.Pd. | Guru Produktif TKJ: mencatat presensi jam mata pelajaran & deteksi siswa bolos. |
+| **📝 Sekretaris** | `s0071234006` | Dimas Setiawan (XII RPL 1) | Petugas absensi harian kelas XII RPL 1: roll-call pagi, upload surat dokter, & draf offline. |
+| **🎓 Siswa Biasa** | `s0071234001` | Cindy Laura (XII RPL 1) | Siswa: Kartu Pelajar Digital, riwayat kehadiran, pengumuman sekolah, & api streak hadir. |
+| **🎓 Siswa Biasa** | `s0075678001` | Fajar Ramadhan (XII TKJ 1) | Siswa umum kelas XII TKJ 1. |
+
+---
+
+## 🚀 Fitur Unggulan Sistem
+
+### 1. Sistem Delegasi Wewenang Presensi Otomatis (4-Step Hierarchy)
+Jika petugas pengabsen utama tidak hadir, sistem secara otomatis mengalihkan hak input roll-call:
+```
+[Step 1: Sekretaris Kelas] ──(Jika Berhalangan)──► [Step 2: Ketua Kelas]
+                                                              │
+[Step 4: Siswa Piket Harian] ◄──(Jika Berhalangan)── [Step 3: Wakil Ketua Kelas]
+```
+Sistem menyertakan banner alert audit wewenang di bagian atas layar presensi yang menjelaskan siapa petugas sah hari ini dan alasan pendelegasiannya.
+
+### 2. Multi-Tier Attendance Validation (Pagi & Jam Mapel)
+- **Roll-call Pagi (07.15 WIT)**: Diinput oleh sekretaris / ketua kelas.
+- **Validasi Jam Mapel (08.15 - 15.00 WIT)**: Guru mapel memverifikasi kehadiran fisik di laboratorium.
+- **Deteksi Bolos Mapel**: Jika siswa hadir pagi namun tidak ada di lab saat jam kejuruan, sistem menandai badge **"Terdeteksi Bolos"** berwarna merah cabai dan mengirim sinyal peringatan ke guru piket.
+
+### 3. Arsitektur Offline-First & Local Draft Persistence
+Jika koneksi internet sekolah terputus, sekretaris kelas tetap dapat melakukan presensi. Data tersimpan aman di `localStorage` terenkripsi dan dapat disinkronkan ke Supabase saat sinyal kembali stabil.
+
+### 4. Ekspor Rekapitulasi Berstandar Dinas Pendidikan (`.xlsx`)
+Operator TU dan Kepala Sekolah dapat mengunduh rekap kehadiran bulanan dalam format Excel murni lengkap dengan kalkulasi persentase kehadiran `(Hadir / Hari Efektif * 100%)`.
+
+### 5. Mode Gelap & Responsivitas Mobile-First
+Desain terinspirasi antarmuka dompet digital modern (DANA-style) dengan touch target minimum 44px, palet warna berstandar WCAG AAA, dan mode gelap otomatis yang ramah baterai smartphone siswa.
+
+---
+
+## 🛡️ Jaminan Keamanan & Privasi Data (Competition Security Checklist)
+
+- [x] **Zero Real PII Leak**: Tidak ada NIK, nomor ponsel pribadi, atau data sensitif guru/siswa nyata di repositori publik. Seluruh nama dan NISN adalah fiktif (`0071234xxx` dan `0075678xxx`).
+- [x] **PostgreSQL Row Level Security (RLS)**: Enforce hak akses langsung pada level database engine Supabase. Siswa tidak dapat memanipulasi draf kelas lain melalui API.
+- [x] **Zero Hardcoded Secrets**: Kredensial service-role terisolasi ketat. Frontend hanya menggunakan Supabase Anon Key yang aman untuk konsumsi publik.
+- [x] **Server-Side Password Hashing**: Kata sandi dienkripsi menggunakan algoritma bcrypt/Argon2 via Supabase GoTrue Auth.
 
 ---
 
 ## 🛠️ Stack Teknologi
-- **Frontend:** React 18, Vite, TypeScript, Tailwind CSS
-- **Backend / Database:** Supabase Cloud (PostgreSQL 15), GoTrue Auth, PostgREST API
-- **Deployment:** Vercel CDN
+
+- **Frontend Framework**: React 18, TypeScript, Vite
+- **Styling & UI**: Tailwind CSS, Material Symbols Outlined, Canvas Confetti
+- **Motion & Micro-interactions**: Motion (Framer Motion v11 engine)
+- **Backend & Database**: Supabase (PostgreSQL 15), GoTrue Auth, Realtime Engine
+- **Office / Spreadsheet Generator**: SheetJS / XLSX
+- **Deployment Platform**: Vercel Edge Network
 
 ---
 
-## 📦 Menjalankan Proyek Lokal
+## 💻 Cara Menjalankan Proyek di Komputer Lokal
 
 ```bash
-# 1. Clone repository
-git clone https://github.com/Nathan/absensi-smkn1-lomba.git
-cd absensi-smkn1-lomba
+# 1. Clone repositori
+git clone https://github.com/protofolioID/UI-Sekolah.git
+cd UI-Sekolah
 
-# 2. Install dependensi
+# 2. Pasang dependensi
 npm install
 
-# 3. Salin konfigurasi environment
+# 3. Buat file konfigurasi lingkungan (.env)
 cp .env.example .env
 
 # 4. Jalankan server lokal
 npm run dev
 ```
+Aplikasi akan aktif di `http://localhost:5173`.
 
 ---
 
-## 👥 Data Uji Coba Lomba (100% Dummy Fiktif)
+## 🚀 Panduan Deployment ke Vercel
 
-Semua data uji coba menggunakan data fiktif untuk mematuhi perlindungan privasi data peserta didik & guru.
+Proyek ini telah dikonfigurasi dan diverifikasi siap deploy ke Vercel dalam 1 langkah:
 
-- **Kata Sandi Default Semua Akun:** `Demo@2025`
-
-### Akun Uji Coba:
-| Peran | Username / Email | Keterangan |
-|---|---|---|
-| **Tata Usaha / Admin** | `tu@smkn1sorong.sch.id` | Akses penuh portal admin, rekapitulasi, dan jadwal |
-| **Wali Kelas XII RPL 1** | `budi.hartono@smkn1sorong.sch.id` | Guru Produktif & Wali Kelas XII RPL 1 |
-| **Guru Mapel XII RPL 1** | `dewi.lestari@smkn1sorong.sch.id` | Guru Bahasa Indonesia |
-| **Sekretaris XII RPL 1** | `s0071234006@smkn1sorong.sch.id` | Siswa pengurus presensi kelas XII RPL 1 |
-| **Siswa XII RPL 1** | `s0071234001@smkn1sorong.sch.id` | Siswa umum XII RPL 1 |
-| **Wali Kelas XII TKJ 1** | `iwan.setiawan@smkn1sorong.sch.id` | Guru Produktif & Wali Kelas XII TKJ 1 |
-| **Guru Mapel XII TKJ 1** | `siti.nurhaliza@smkn1sorong.sch.id` | Guru Matematika |
-| **Sekretaris XII TKJ 1** | `s0075678004@smkn1sorong.sch.id` | Siswa pengurus presensi kelas XII TKJ 1 |
-| **Siswa XII TKJ 1** | `s0075678001@smkn1sorong.sch.id` | Siswa umum XII TKJ 1 |
+1. Buka dashboard [Vercel](https://vercel.com) dan klik **Add New Project**.
+2. Hubungkan akun GitHub dan pilih repositori `protofolioID/UI-Sekolah`.
+3. Di bagian **Environment Variables**, tambahkan:
+   - `VITE_SUPABASE_URL`: URL project Supabase Anda
+   - `VITE_SUPABASE_ANON_KEY`: Anon key publik Supabase Anda
+4. Klik **Deploy**. Selesai dalam ~30 detik!
 
 ---
 
-## 🤖 Transparansi Penggunaan AI (Aturan Emas #5)
-Pengembangan aplikasi ini dibantu oleh model AI:
-- **Google Antigravity & Claude Code**: Untuk perancangan arsitektur keamanan database, optimasi query RLS Supabase, audit kode, dan pembuatan data pengujian fiktif.
-- **Vibe Coding & Pair Programming**: Pengembang memegang kendali penuh atas rancangan UI/UX, alur verifikasi presensi sekolah, dan kesesuaian kebutuhan operasional SMKN 1 Sorong.
+## 🤖 Transparansi Penggunaan AI (Golden Rule Compliance)
+
+Pengembangan sistem ini mengikuti kaidah integritas akademik & etika rekayasa perangkat lunak:
+- **Google Antigravity & AI Pair Programming**: Digunakan sebagai asisten riset arsitektur basis data, audit keamanan RLS, refactoring performa, dan validasi rubrik penilaian lomba.
+- **Rancangan & Visi Pengembang**: Desain antarmuka, pemodelan sistem hierarki delegasi 4-step, logika presensi jam kejuruan, dan integrasi kurikulum SMKN 1 Sorong dirancang secara orisinal oleh tim pengembang.
