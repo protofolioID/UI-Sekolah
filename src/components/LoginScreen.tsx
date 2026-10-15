@@ -60,16 +60,41 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               Login ke Akun Anda
             </h2>
 
-            {/* Quick Demo Helper Modal Trigger for Juries / Testers */}
-            <button
-              type="button"
-              onClick={() => setShowRoleHelper(!showRoleHelper)}
-              className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-sky-50 text-primary border border-sky-200 hover:bg-sky-100 transition active:scale-95 cursor-pointer flex items-center gap-1"
-              title="Pilih Akun Penilaian Lomba"
-            >
-              <span>🎯 Akun Uji</span>
-              <span className="material-symbols-outlined text-[14px]">expand_more</span>
-            </button>
+            {/* Quick Fill Shortcuts for Admin TU, Super Admin & Wali Kelas */}
+            <div className="flex items-center gap-1 flex-wrap justify-end">
+              <button
+                type="button"
+                onClick={() => { setIdentifier('guru'); setPassword('Demo@2025'); }}
+                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 transition active:scale-95 cursor-pointer shadow-xs"
+                title="Isi Akun Guru / Wali Kelas"
+              >
+                👨‍🏫 Wali
+              </button>
+              <button
+                type="button"
+                onClick={() => { setIdentifier('TU'); setPassword('Demo@2025'); }}
+                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-sky-50 text-primary border border-sky-200 hover:bg-sky-100 transition active:scale-95 cursor-pointer"
+                title="Isi Akun Tata Usaha (Admin TU)"
+              >
+                🛠️ TU
+              </button>
+              <button
+                type="button"
+                onClick={() => { setIdentifier('superadmin_sorong'); setPassword('Demo@2025'); }}
+                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition active:scale-95 cursor-pointer"
+                title="Isi Akun Super Admin"
+              >
+                👑 Super
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowRoleHelper(!showRoleHelper)}
+                className="text-[10px] font-bold px-1.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition active:scale-95 cursor-pointer"
+                title="Pilih Akun Penilaian Lomba Lainnya"
+              >
+                🎯
+              </button>
+            </div>
           </div>
 
           {/* Demo Account Selector Drawer */}

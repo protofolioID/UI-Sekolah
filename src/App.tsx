@@ -26,6 +26,7 @@ import { AttendanceScreen } from './components/AttendanceScreen';
 import { SubmitModal } from './components/SubmitModal';
 import { AttachmentModal } from './components/AttachmentModal';
 import { ValidasiGuruScreen } from './components/ValidasiGuruScreen';
+import { PerangkatKelasScreen } from './components/PerangkatKelasScreen';
 import { WaliKelasDashboard } from './components/WaliKelasDashboard';
 import { GuruPiketDashboard } from './components/GuruPiketDashboard';
 import { OperatorDashboard } from './components/OperatorDashboard';
@@ -489,6 +490,13 @@ export default function App() {
               onLogout={handleLogout}
               onShowToast={showToast}
               initialTab="wali_kelas"
+            />
+          ) : (activeUser.role === 'guru' || activeUser.role === 'wali_kelas' || activeUser.is_wali_kelas) ? (
+            <PerangkatKelasScreen
+              user={activeUser}
+              initialClassId={activeUser.kelas_id || 'e88128be-8fc3-4973-8d69-00ef17571626'}
+              onNavigateHome={() => setCurrentTab('beranda')}
+              onShowToast={showToast}
             />
           ) : effectiveRole === 'siswa' ? (
               <div className="w-full max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-4xl mx-auto pb-24 px-3 sm:px-4">

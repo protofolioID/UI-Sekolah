@@ -1,15 +1,45 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
+import { defineConfig, Plugin } from 'vite';
 
-export default defineConfig(() => {
+function whatsappGatewayPlugin(): Plugin {
+  return {
+    name: 'whatsapp-gateway-plugin',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (req.url && req.url.startsWith('/api/wa')) {
+          try {
+            const modulePath = './server/wa-routes.ts';
+            const { handleWhatsAppApiRequest } = await import(/* @vite-ignore */ modulePath);
+            const handled = await handleWhatsAppApiRequest(req, res);
+            if (handled) return;
+          } catch (err) {
+            console.error('[WA Middleware Error]:', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'WhatsApp Gateway Error', detail: String(err) }));
+            return;
+          }
+        }
+        next();
+      });
+    },
+  };
+}
+
+export default defineConfig(({ command }) => {
+  const plugins = [react(), tailwindcss()];
+  if (command === 'serve') {
+    plugins.push(whatsappGatewayPlugin());
+  }
+
   return {
     base: './',
-    plugins: [react(), tailwindcss()],
+    plugins,
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
+        '@': path.resolve(process.cwd(), './src'),
       },
     },
     server: {

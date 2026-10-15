@@ -15,6 +15,7 @@ import {
 import { ScheduleSlot, Student, Teacher, ExportPeriod, ExportBasis } from '../../types';
 import { INITIAL_TEACHERS } from './mockData';
 import { ExportKehadiranModal } from './ExportKehadiranModal';
+import { WhatsAppGatewayView } from './WhatsAppGatewayView';
 import { supabase } from '../../lib/supabase';
 
 interface AdminDashboardViewProps {
@@ -542,6 +543,22 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             <span>⚙️</span>
             <span>Kebijakan Sekolah</span>
           </button>
+
+          {/* WhatsApp Gateway Tab (Superadmin) */}
+          {isSuperadmin && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('whatsapp')}
+              className={`px-3 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer ${
+                activeTab === 'whatsapp'
+                  ? 'bg-[#075e54] text-white shadow-xs'
+                  : 'text-[#404751] hover:bg-[#f2f4f6]'
+              }`}
+            >
+              <span>📱</span>
+              <span>Integrasi WA (QR)</span>
+            </button>
+          )}
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════════ */}
@@ -1200,6 +1217,11 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               </div>
             </div>
           </div>
+        )}
+
+        {/* TAB WHATSAPP GATEWAY (SUPERADMIN) */}
+        {isSuperadmin && activeTab === 'whatsapp' && (
+          <WhatsAppGatewayView onShowFeedback={showFeedback} />
         )}
       </div>
 
