@@ -13,23 +13,23 @@ export const SCHEDULES_BY_DAY: Record<string, SubjectSchedule[]> = {
   senin: [
     {
       id: 'senin-1',
-      subject: 'Materi TKA',
+      subject: 'Materi Kejuruan RPL',
       time: '08.15 - 11.50',
-      teacher: 'Titalae Walalayo, S.Kom',
+      teacher: 'Budi Hartono, S.Kom.',
       type: 'productive'
     },
     {
       id: 'senin-2',
-      subject: 'Materi TKA',
+      subject: 'Basis Data',
       time: '11.50 - 13.25',
-      teacher: 'Haris Titirloloby, S.Kom',
+      teacher: 'Dewi Lestari, S.Pd.',
       type: 'productive'
     },
     {
       id: 'senin-3',
-      subject: 'Materi TKA',
+      subject: 'Pemrograman Web',
       time: '13.25 - 14.45',
-      teacher: 'Yovani Romauli Sitorus, S.Pd',
+      teacher: 'Iwan Setiawan, S.Kom.',
       type: 'productive'
     },
   ],
@@ -38,21 +38,21 @@ export const SCHEDULES_BY_DAY: Record<string, SubjectSchedule[]> = {
       id: 'selasa-1',
       subject: 'PPKn',
       time: '08.15 - 09.35',
-      teacher: 'Alfrida Serang Kasy, S.Pd',
+      teacher: 'Siti Nurhaliza, M.Pd.',
       type: 'general'
     },
     {
       id: 'selasa-2',
-      subject: 'Materi TKA',
+      subject: 'Pemrograman Berorientasi Objek',
       time: '09.35 - 12.30',
-      teacher: 'Mohammad Sya\'ban, S.Pd',
+      teacher: 'Budi Hartono, S.Kom.',
       type: 'productive'
     },
     {
       id: 'selasa-3',
-      subject: 'Materi TKA',
+      subject: 'Basis Data Lanjut',
       time: '12.45 - 14.45',
-      teacher: 'Toriq Najamudin, A.Md',
+      teacher: 'Dewi Lestari, S.Pd.',
       type: 'productive'
     },
   ],
@@ -61,76 +61,76 @@ export const SCHEDULES_BY_DAY: Record<string, SubjectSchedule[]> = {
       id: 'rabu-1',
       subject: 'Bahasa Indonesia',
       time: '08.15 - 10.15',
-      teacher: 'Dra. Yayuk Puji Hastuti',
+      teacher: 'Siti Nurhaliza, M.Pd.',
       type: 'general'
     },
     {
       id: 'rabu-2',
       subject: 'Bahasa Inggris',
       time: '10.30 - 12.30',
-      teacher: 'Dinaria Purba, A.Md, S.Pd',
+      teacher: 'Dewi Lestari, S.Pd.',
       type: 'general'
     },
     {
       id: 'rabu-3',
-      subject: 'Matematika',
+      subject: 'Matematika Terapan',
       time: '12.45 - 14.45',
-      teacher: 'Ani Widiastuti, S.T',
+      teacher: 'Budi Hartono, S.Kom.',
       type: 'general'
     },
   ],
   kamis: [
     {
       id: 'kamis-1',
-      subject: 'Materi TKA',
+      subject: 'Pemrograman Perangkat Bergerak',
       time: '08.15 - 12.30',
-      teacher: 'Toriq Najamudin, A.Md',
+      teacher: 'Budi Hartono, S.Kom.',
       type: 'productive'
     },
     {
       id: 'kamis-2',
-      subject: 'Matematika',
+      subject: 'Matematika Terapan',
       time: '12.45 - 14.45',
-      teacher: 'Ani Widiastuti, S.T',
+      teacher: 'Iwan Setiawan, S.Kom.',
       type: 'general'
     },
   ],
   jumat: [
     {
       id: 'jumat-1',
-      subject: 'Materi TKA',
+      subject: 'Kejuruan Komputer & Jaringan',
       time: '08.15 - 09.15',
-      teacher: 'Toriq Najamudin, A.Md',
+      teacher: 'Iwan Setiawan, S.Kom.',
       type: 'productive'
     },
     {
       id: 'jumat-2',
       subject: 'Bahasa Indonesia',
       time: '09.15 - 11.00',
-      teacher: 'Dra. Yayuk Puji Hastuti',
+      teacher: 'Siti Nurhaliza, M.Pd.',
       type: 'general'
     },
   ],
   sabtu: [
     {
       id: 'sabtu-1',
-      subject: 'Bahasa Inggris',
+      subject: 'Bahasa Inggris Kejuruan',
       time: '08.15 - 10.15',
-      teacher: 'Dinaria Purba, A.Md, S.Pd',
+      teacher: 'Dewi Lestari, S.Pd.',
       type: 'general'
     },
     {
       id: 'sabtu-2',
-      subject: 'Materi TKA',
+      subject: 'Proyek Kreatif & Kewirausahaan',
       time: '10.30 - 11.50',
-      teacher: 'Yovani Romauli Sitorus, S.Pd',
+      teacher: 'Budi Hartono, S.Kom.',
       type: 'productive'
     },
     {
       id: 'sabtu-3',
-      subject: 'Materi TKA',
+      subject: 'Pengembangan Produk Perangkat Lunak',
       time: '12.05 - 13.25',
-      teacher: 'Toriq Najamudin, A.Md',
+      teacher: 'Budi Hartono, S.Kom.',
       type: 'productive'
     },
   ],

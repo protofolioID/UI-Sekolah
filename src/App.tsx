@@ -31,6 +31,9 @@ import { GuruPiketDashboard } from './components/GuruPiketDashboard';
 import { OperatorDashboard } from './components/OperatorDashboard';
 import { AdminDashboardView } from './components/AdminDashboardView';
 import { AdminPortal } from './components/admin/AdminPortal';
+import { NotificationsModal } from './components/NotificationsModal';
+import { NOTIFICATIONS } from './components/admin/mockData';
+import { NotificationItem } from './types';
 
 export default function App() {
   const auth = useAuth();
@@ -47,6 +50,38 @@ export default function App() {
   const [samakanStudents, setSamakanStudents] = useState<StudentAttendance[]>(SAMAKAN_INITIAL_STUDENTS);
   const [teacherAlert, setTeacherAlert] = useState<TeacherCallAlert>(INITIAL_TEACHER_ALERT);
   const [loginError, setLoginError] = useState<string | null>(null);
+
+  // Notifications State (Synced with AdminPortal)
+  const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('smkn1_school_announcements');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return NOTIFICATIONS;
+  });
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+
+  const handleMarkAllNotificationsRead = () => {
+    setNotifications((prev) => {
+      const updated = prev.map((n) => ({ ...n, read: true }));
+      try {
+        localStorage.setItem('smkn1_school_announcements', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+    showToast('Notifikasi', 'Semua notifikasi ditandai telah dibaca.', 'info');
+  };
+
+  const handleAddNotification = (newNotif: NotificationItem) => {
+    setNotifications((prev) => {
+      const updated = [newNotif, ...prev];
+      try {
+        localStorage.setItem('smkn1_school_announcements', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+    showToast('Berhasil', 'Pengumuman baru berhasil disiarkan.', 'success');
+  };
 
   // Old Attendance state
   const [oldStudents, setOldStudents] = useState<Student[]>(() => {
@@ -111,6 +146,21 @@ export default function App() {
         kelas_id: 'e88128be-8fc3-4973-8d69-00ef17571626',
         kelas: { id: 'e88128be-8fc3-4973-8d69-00ef17571626', nama: 'XII TKJ 1' },
       };
+
+  // Unread Notifications Count based on targetAudience and user role
+  const unreadNotificationsCount = React.useMemo(() => {
+    return notifications.filter((n) => {
+      if (n.read) return false;
+      const roleKey =
+        currentUser.role === 'superadmin' ? 'superadmin'
+        : currentUser.role === 'operator' || (currentUser.role as any) === 'admin' ? 'admin'
+        : currentUser.role === 'guru' || currentUser.role === 'wali_kelas' || currentUser.role === 'guru_piket' ? 'guru'
+        : 'siswa';
+      if (roleKey === 'admin' || roleKey === 'superadmin') return true;
+      if (!n.targetAudience || n.targetAudience === 'semua') return true;
+      return n.targetAudience === roleKey;
+    }).length;
+  }, [notifications, currentUser.role]);
 
   // Status Kehadiran Hari Ini & Wewenang Pengabsen Harian Siswa
   const todayStatusMap = React.useMemo(() => {
@@ -413,6 +463,8 @@ export default function App() {
               onSubmitMorningDraft={handleSubmitMorningDraft}
               onNavigateToTab={(tab) => setCurrentTab(tab as any)}
               onShowToast={showToast}
+              onOpenNotifications={() => setIsNotificationModalOpen(true)}
+              unreadNotificationsCount={unreadNotificationsCount}
             />
           )
         )}
@@ -553,6 +605,19 @@ export default function App() {
         isOpen={Boolean(selectedStudentForAttachment)}
         onClose={() => setSelectedStudentForAttachment(null)}
         onSaveNote={handleSaveNote}
+      />
+      <NotificationsModal
+        isOpen={isNotificationModalOpen}
+        onClose={() => setIsNotificationModalOpen(false)}
+        notifications={notifications}
+        onMarkAllAsRead={handleMarkAllNotificationsRead}
+        onAddNotification={handleAddNotification}
+        userRole={
+          currentUser.role === 'superadmin' ? 'superadmin'
+          : currentUser.role === 'operator' || (currentUser.role as any) === 'admin' ? 'admin'
+          : currentUser.role === 'guru' || currentUser.role === 'wali_kelas' || currentUser.role === 'guru_piket' ? 'guru'
+          : 'siswa'
+        }
       />
     </div>
   );

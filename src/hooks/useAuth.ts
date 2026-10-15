@@ -165,7 +165,7 @@ export function useAuth() {
 
   // Role mapping
   const resolveRole = (profile: Profile): UserRole => {
-    if ((profile.role as string) === 'superadmin') return 'superadmin';
+    if (profile.username === 'superadmin_sorong' || (profile.role as string) === 'superadmin') return 'superadmin';
     if (profile.role === 'operator' || (profile.role as any) === 'admin') return 'operator';
     if (profile.role === 'guru_piket') return 'guru_piket';
     if (profile.role === 'wali_kelas') return 'wali_kelas';

@@ -127,12 +127,12 @@ export const ValidasiGuruScreen: React.FC<ValidasiGuruScreenProps> = ({
           .select('id, kelas_id, jam_mulai, jam_selesai, hari, ruang, kelas:kelas_id(id, nama), mapel:mapel_id(nama)')
           .eq('guru_id', user.id);
 
-        // Fallback for demo teacher (e.g. user-budi) to productive TKJ teacher schedule in DB
+        // Fallback for demo teacher to clean demo teacher schedule in DB (Budi Hartono)
         if (!scheduleRows || scheduleRows.length === 0) {
           const { data: fallbackRows } = await supabase
             .from('jadwal')
             .select('id, kelas_id, jam_mulai, jam_selesai, hari, ruang, kelas:kelas_id(id, nama), mapel:mapel_id(nama)')
-            .eq('guru_id', '93b68aab-5c50-4f8e-86bc-d402d1018ee4'); // Titalae Walalayo, S.Kom
+            .eq('guru_id', '255f8ecb-5b46-48db-8bb9-448d571fefcc'); // Budi Hartono, S.Kom.
           scheduleRows = fallbackRows;
         }
 

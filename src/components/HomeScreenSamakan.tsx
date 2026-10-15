@@ -14,6 +14,8 @@ interface HomeScreenProps {
   onSubmitMorningDraft: (updatedStudents: StudentAttendance[]) => void;
   onNavigateToTab: (tab: string) => void;
   onShowToast: (title: string, desc: string, type?: 'success' | 'warning' | 'info') => void;
+  onOpenNotifications?: () => void;
+  unreadNotificationsCount?: number;
 }
 
 const SchoolAnnouncementBanner: React.FC<{ userRole: 'guru' | 'siswa' }> = ({ userRole }) => {
@@ -82,7 +84,13 @@ const SchoolAnnouncementBanner: React.FC<{ userRole: 'guru' | 'siswa' }> = ({ us
 };
 
 
-export const HomeScreenGuru: React.FC<HomeScreenProps> = ({ user, onNavigateToTab, onShowToast }) => {
+export const HomeScreenGuru: React.FC<HomeScreenProps> = ({
+  user,
+  onNavigateToTab,
+  onShowToast,
+  onOpenNotifications,
+  unreadNotificationsCount = 0,
+}) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [sisaKelas, setSisaKelas] = useState(0);
@@ -176,9 +184,20 @@ export const HomeScreenGuru: React.FC<HomeScreenProps> = ({ user, onNavigateToTa
               </div>
             </div>
           </div>
-          <button className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white relative backdrop-blur-md">
+          <button
+            type="button"
+            onClick={onOpenNotifications || (() => onShowToast('Notifikasi', 'Tidak ada notifikasi baru.', 'info'))}
+            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 transition-all flex items-center justify-center text-white relative backdrop-blur-md cursor-pointer"
+            title="Pemberitahuan Sekolah"
+          >
             <span className="material-symbols-outlined notranslate text-[20px]">notifications</span>
-            <span className="absolute top-2 right-2.5 w-2 h-2 bg-orange-500 rounded-full ring-2 ring-primary"></span>
+            {unreadNotificationsCount > 0 ? (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-black rounded-full ring-2 ring-primary flex items-center justify-center">
+                {unreadNotificationsCount}
+              </span>
+            ) : (
+              <span className="absolute top-2 right-2.5 w-2 h-2 bg-emerald-400 rounded-full ring-2 ring-primary"></span>
+            )}
           </button>
         </div>
 
@@ -392,9 +411,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ( {
   onSubmitMorningDraft,
   onNavigateToTab,
   onShowToast,
+  onOpenNotifications,
+  unreadNotificationsCount = 0,
 }) => {
   if (user.role === 'guru' || user.role === 'wali_kelas' || user.role === 'guru_piket') {
-    return <HomeScreenGuru user={user} onNavigateToTab={onNavigateToTab} onShowToast={onShowToast} classSummary={classSummary} students={students} teacherAlert={teacherAlert} onSendTeacherCall={onSendTeacherCall} onSubmitMorningDraft={onSubmitMorningDraft} />;
+    return (
+      <HomeScreenGuru
+        user={user}
+        onNavigateToTab={onNavigateToTab}
+        onShowToast={onShowToast}
+        classSummary={classSummary}
+        students={students}
+        teacherAlert={teacherAlert}
+        onSendTeacherCall={onSendTeacherCall}
+        onSubmitMorningDraft={onSubmitMorningDraft}
+        onOpenNotifications={onOpenNotifications}
+        unreadNotificationsCount={unreadNotificationsCount}
+      />
+    );
   }
 
 
@@ -625,18 +659,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ( {
           </div>
 
           <button
-            onClick={() =>
-              onShowToast(
-                'Notifikasi SMKN 1',
-                'Jam Ke-2 telah dimulai di Lab RPL 2. Presensi dibuka.',
-                'info'
-              )
-            }
-            className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white hover:bg-white/25 active:scale-95 transition-all relative"
             type="button"
+            onClick={onOpenNotifications || (() => onShowToast('Notifikasi', 'Tidak ada notifikasi baru.', 'info'))}
+            className="w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 transition-all flex items-center justify-center text-white relative cursor-pointer"
+            title="Pemberitahuan Sekolah"
           >
             <span className="material-symbols-outlined notranslate text-[22px]">notifications</span>
-            <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full ring-2 ring-primary"></span>
+            {unreadNotificationsCount > 0 ? (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-black rounded-full ring-2 ring-primary flex items-center justify-center">
+                {unreadNotificationsCount}
+              </span>
+            ) : (
+              <span className="absolute top-2 right-2 w-2 h-2 bg-emerald-400 rounded-full ring-2 ring-primary"></span>
+            )}
           </button>
         </div>
 

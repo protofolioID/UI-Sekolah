@@ -93,7 +93,7 @@ export const MuridProfileScreen: React.FC<MuridProfileScreenProps> = ({
             </div>
             <div className="flex justify-between py-1 border-b border-slate-50">
               <span className="text-slate-400">Wali Kelas</span>
-              <span className="font-bold text-slate-800">{user.homeroomTeacher || 'Ibu Dina Purba, S.Pd.'}</span>
+              <span className="font-bold text-slate-800">{user.homeroomTeacher || 'Budi Hartono, S.Kom.'}</span>
             </div>
             <div className="flex justify-between py-1">
               <span className="text-slate-400">Sekolah</span>

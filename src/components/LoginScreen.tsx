@@ -79,6 +79,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               <div className="grid grid-cols-2 gap-1.5 text-left">
                 <button
                   type="button"
+                  onClick={() => selectDemoAccount('superadmin_sorong')}
+                  className="col-span-2 p-2 rounded-xl bg-gradient-to-r from-purple-700 to-indigo-800 text-white text-[11px] font-bold text-left cursor-pointer transition hover:opacity-95 shadow-xs flex items-center justify-between"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span>👑</span>
+                    <span>Super Admin (Kepala Sekolah)</span>
+                  </span>
+                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-mono">superadmin_sorong</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => selectDemoAccount('tu')}
                   className="p-1.5 rounded-lg bg-white border border-slate-200 hover:border-primary text-[11px] font-semibold text-slate-700 text-left cursor-pointer transition hover:bg-sky-50"
                 >

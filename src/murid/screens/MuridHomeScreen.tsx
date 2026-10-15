@@ -242,7 +242,7 @@ export const MuridHomeScreen: React.FC<MuridHomeScreenProps> = ({
             <div className="flex flex-col">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Wali Kelas</span>
               <span className="text-xs font-bold text-slate-700 truncate">
-                {user.homeroomTeacher || (perangkatKelas as any)?.waliKelasNama || (user.wali_kelas as any)?.nama || 'Ibu Dina Purba, S.Pd.'}
+                {user.homeroomTeacher || (perangkatKelas as any)?.waliKelasNama || (user.wali_kelas as any)?.nama || 'Budi Hartono, S.Kom.'}
               </span>
             </div>
             <div className="flex flex-col">
@@ -369,7 +369,7 @@ export const MuridHomeScreen: React.FC<MuridHomeScreenProps> = ({
           <div className="text-xs text-slate-600 space-y-1 pt-1">
             <p className="flex justify-between">
               <span className="text-slate-400 font-medium">Wali Kelas:</span>
-              <span className="font-bold text-slate-800">{(perangkatKelas as any)?.waliKelasNama || (user.wali_kelas as any)?.nama || 'Ibu Dina Purba, S.Pd.'}</span>
+              <span className="font-bold text-slate-800">{(perangkatKelas as any)?.waliKelasNama || (user.wali_kelas as any)?.nama || 'Budi Hartono, S.Kom.'}</span>
             </p>
             <p className="flex justify-between">
               <span className="text-slate-400 font-medium">Sekretaris Kelas:</span>

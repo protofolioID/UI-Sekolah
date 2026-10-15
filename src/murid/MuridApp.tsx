@@ -11,6 +11,9 @@ import { MuridHomeScreen } from './screens/MuridHomeScreen';
 import { MuridJadwalScreen } from './screens/MuridJadwalScreen';
 import { MuridAbsensiScreen } from './screens/MuridAbsensiScreen';
 import { MuridProfileScreen } from './screens/MuridProfileScreen';
+import { NotificationsModal } from '../components/NotificationsModal';
+import { NOTIFICATIONS } from '../components/admin/mockData';
+import { NotificationItem } from '../types';
 
 export const MuridApp: React.FC<MuridAppProps> = ({
   user = USER_PROFILES.siswa,
@@ -22,6 +25,26 @@ export const MuridApp: React.FC<MuridAppProps> = ({
 }) => {
   const [currentTab, setCurrentTab] = useState<MuridTabKey>(initialTab);
   const [localToast, setLocalToast] = useState<{ title: string; desc: string; type: string } | null>(null);
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('smkn1_school_announcements');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return NOTIFICATIONS;
+  });
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+
+  const handleMarkAllNotificationsRead = () => {
+    setNotifications((prev) => {
+      const updated = prev.map((n) => ({ ...n, read: true }));
+      try {
+        localStorage.setItem('smkn1_school_announcements', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+    handleToast('Notifikasi', 'Semua notifikasi ditandai telah dibaca.', 'info');
+  };
 
   // Dark Mode State with localStorage persistence
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -81,7 +104,7 @@ export const MuridApp: React.FC<MuridAppProps> = ({
             user={user}
             isDarkMode={isDarkMode}
             onToggleDarkMode={toggleDarkMode}
-            onNotificationClick={() => handleToast('Notifikasi', 'Tidak ada pengumuman baru hari ini.', 'info')}
+            onNotificationClick={() => setIsNotificationModalOpen(true)}
           />
 
           {/* Main Content Area with Desktop offset (lg:pl-64) */}
@@ -151,6 +174,14 @@ export const MuridApp: React.FC<MuridAppProps> = ({
           <MuridBottomNav
             currentTab={currentTab}
             onTabChange={handleTabChange}
+          />
+
+          <NotificationsModal
+            isOpen={isNotificationModalOpen}
+            onClose={() => setIsNotificationModalOpen(false)}
+            notifications={notifications}
+            onMarkAllAsRead={handleMarkAllNotificationsRead}
+            userRole="siswa"
           />
         </div>
       </MotionConfig>

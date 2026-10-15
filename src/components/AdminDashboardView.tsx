@@ -1376,15 +1376,16 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   className="w-full h-10 px-3 bg-[#f2f4f6] rounded-xl text-[12px] font-semibold text-[#191c1e] focus:bg-white focus:ring-2 focus:ring-purple-700 outline-hidden"
                 >
                   <optgroup label="Siswa">
-                    <option value="s0068192041 (Cindy Laura)">s0068192041 - Cindy Laura (XII TKJ 1)</option>
-                    <option value="s0068192042 (Andhika Pratama)">s0068192042 - Andhika Pratama (XII TKJ 1)</option>
-                    <option value="s0068192051 (Nathan Ivander)">s0068192051 - Nathan Ivander (XII DKV 1)</option>
-                    <option value="s0068192052 (Putri Natasya)">s0068192052 - Putri Natasya (XII DKV 1)</option>
+                    <option value="s0071234001 (Cindy Laura)">s0071234001 - Cindy Laura (XII RPL 1)</option>
+                    <option value="s0071234002 (Andhika Pratama)">s0071234002 - Andhika Pratama (XII RPL 1)</option>
+                    <option value="s0075678001 (Fajar Ramadhan)">s0075678001 - Fajar Ramadhan (XII TKJ 1)</option>
+                    <option value="s0075678002 (Siti Aisyah)">s0075678002 - Siti Aisyah (XII TKJ 1)</option>
                   </optgroup>
                   <optgroup label="Dewan Guru">
-                    <option value="196812291993031011 (Budi Santoso, S.Kom)">196812291993031011 - Budi Santoso, S.Kom</option>
-                    <option value="198008242006042012 (Joana Josephine Sahuburua, S.T)">198008242006042012 - Joana Sahuburua, S.T</option>
-                    <option value="196504121989032005 (Dra. Yayuk Puji Hastuti)">196504121989032005 - Dra. Yayuk Puji Hastuti</option>
+                    <option value="198501152010011001 (Budi Hartono, S.Kom.)">198501152010011001 - Budi Hartono, S.Kom.</option>
+                    <option value="199003202015022002 (Dewi Lestari, S.Pd.)">199003202015022002 - Dewi Lestari, S.Pd.</option>
+                    <option value="198708142011011003 (Iwan Setiawan, S.Kom.)">198708142011011003 - Iwan Setiawan, S.Kom.</option>
+                    <option value="199211052016032004 (Siti Nurhaliza, M.Pd.)">199211052016032004 - Siti Nurhaliza, M.Pd.</option>
                   </optgroup>
                   <optgroup label="Administrator & Operator">
                     <option value="admin_demo (Tata Usaha SMKN 1)">admin_demo - Tata Usaha SMKN 1</option>
