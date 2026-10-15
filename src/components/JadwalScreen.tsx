@@ -600,12 +600,13 @@ export const JadwalScreen: React.FC<JadwalScreenProps> = ({ onShowToast, user, o
 
   const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
-  // 1. Fetch available classes
+  // 1. Fetch available classes (Strictly clean demo classes)
   useEffect(() => {
     async function loadClasses() {
       const { data } = await supabase
         .from('kelas')
         .select('id, nama')
+        .in('id', ['28da94b0-33e2-4734-8bea-1a0bb740c7ce', 'e88128be-8fc3-4973-8d69-00ef17571626'])
         .order('nama', { ascending: true });
 
       if (data && data.length > 0) {

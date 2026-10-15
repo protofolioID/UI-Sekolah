@@ -25,38 +25,31 @@ export const JP_TIMES: Record<number, string> = {
 export const INITIAL_TEACHERS: Teacher[] = [
   {
     id: 't-01',
-    nip: '196812291993031011',
-    name: 'Budi Santoso, S.Kom',
-    subject: 'Pemodelan Perangkat Lunak & Web',
-    room: 'Lab Komputer 2',
+    nip: '198501152010011001',
+    name: 'Budi Hartono, S.Kom.',
+    subject: 'Pemodelan Perangkat Lunak & Basis Data',
+    room: 'Wali Kelas XII RPL 1',
   },
   {
     id: 't-02',
-    nip: '196504121989032005',
-    name: 'Dra. Yayuk Puji Hastuti',
-    subject: 'Pendidikan Pancasila & PPKn',
-    room: 'Ruang Teori 12',
+    nip: '199003202015022002',
+    name: 'Dewi Lestari, S.Pd.',
+    subject: 'Pemrograman Web & Perangkat Bergerak',
+    room: 'Lab RPL 2',
   },
   {
     id: 't-03',
-    nip: '198205162010011018',
-    name: 'Fransiskus X. D. Busa, S.Kom',
-    subject: 'Keamanan Jaringan & Cyber Security',
-    room: 'Lab Komputer 1',
+    nip: '198708142011011003',
+    name: 'Iwan Setiawan, S.Kom.',
+    subject: 'Administrasi Infrastruktur Jaringan',
+    room: 'Wali Kelas XII TKJ 1',
   },
   {
     id: 't-04',
-    nip: '198008242006042012',
-    name: 'Joana Josephine Sahuburua, S.T',
-    subject: 'Desain Komunikasi Visual (DKV)',
-    room: 'Studio DKV 1',
-  },
-  {
-    id: 't-05',
-    nip: '198502102011022003',
-    name: 'Fonny Fransisca Wanma, S.Pd',
-    subject: 'Bahasa Indonesia & Publikasi',
-    room: 'Ruang Teori 10',
+    nip: '199211052016032004',
+    name: 'Siti Nurhaliza, M.Pd.',
+    subject: 'Teknologi Layanan Jaringan & Matematika',
+    room: 'Lab Komputer 1',
   },
 ];
 
@@ -112,14 +105,14 @@ export const INITIAL_STUDENTS: Student[] = [
     attachmentType: 'dispensation',
   },
 
-  // ─── KELAS XII DKV 1 (5 SISWA) ───
+  // ─── KELAS XII RPL 1 (5 SISWA) ───
   {
     id: 's-06',
     no: '01',
     name: 'Nathan Ivander',
     nis: '0068192051',
     status: 'Hadir',
-    kelas: 'XII DKV 1',
+    kelas: 'XII RPL 1',
   },
   {
     id: 's-07',
@@ -127,7 +120,7 @@ export const INITIAL_STUDENTS: Student[] = [
     name: 'Putri Natasya',
     nis: '0068192052',
     status: 'Hadir',
-    kelas: 'XII DKV 1',
+    kelas: 'XII RPL 1',
   },
   {
     id: 's-08',
@@ -135,7 +128,7 @@ export const INITIAL_STUDENTS: Student[] = [
     name: 'Rendy Saputra',
     nis: '0068192053',
     status: 'Hadir',
-    kelas: 'XII DKV 1',
+    kelas: 'XII RPL 1',
   },
   {
     id: 's-09',
@@ -143,7 +136,7 @@ export const INITIAL_STUDENTS: Student[] = [
     name: 'Jessica Amanda',
     nis: '0068192054',
     status: 'Sakit',
-    kelas: 'XII DKV 1',
+    kelas: 'XII RPL 1',
     note: 'Sakit tifus ringan (Surat dokter Puskesmas Malawei)',
     hasAttachment: true,
     attachmentTitle: 'Surat Sakit Dokter - Puskesmas Malawei Sorong',
@@ -155,7 +148,7 @@ export const INITIAL_STUDENTS: Student[] = [
     name: 'Fajar Nugroho',
     nis: '0068192055',
     status: 'Izin',
-    kelas: 'XII DKV 1',
+    kelas: 'XII RPL 1',
     note: 'Dispensasi persiapan kontingen desain poster FLS2N Papua Barat Daya',
     hasAttachment: true,
     attachmentTitle: 'Surat Tugas FLS2N Bidang Poster Desain 2026',

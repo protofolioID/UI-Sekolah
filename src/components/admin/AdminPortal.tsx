@@ -57,82 +57,91 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ session, onLogout, onS
 
     async function loadSupabaseData() {
       try {
-        // 1. Fetch Teachers & real homeroom assignments from Supabase
+        const DEMO_CLASS_IDS = ['28da94b0-33e2-4734-8bea-1a0bb740c7ce', 'e88128be-8fc3-4973-8d69-00ef17571626'];
+        const DEMO_TEACHERS = ['budihartono', 'dewilestari', 'iwansetiawan', 'sitinurhaliza'];
+
+        // 1. Fetch Teachers (Strictly Clean Demo Teachers)
         const { data: dbTeachers } = await supabase
           .from('profiles')
           .select('id, nama, username')
           .eq('role', 'guru')
+          .in('username', DEMO_TEACHERS)
           .order('nama', { ascending: true });
 
         const { data: dbClasses } = await supabase
           .from('kelas')
-          .select('id, nama, wali_kelas_id');
+          .select('id, nama, wali_kelas_id')
+          .in('id', DEMO_CLASS_IDS);
 
         if (active && dbTeachers && dbTeachers.length > 0) {
           const mappedTeachers: Teacher[] = dbTeachers.map((t, idx) => {
             const assignedClass = dbClasses?.find((c) => c.wali_kelas_id === t.id);
             return {
               id: t.id,
-              nip: t.username || `197${idx}0101`,
+              nip: t.username === 'budihartono' ? '198501152010011001'
+                : t.username === 'dewilestari' ? '199003202015022002'
+                : t.username === 'iwansetiawan' ? '198708142011011003'
+                : '199211052016032004',
               name: t.nama,
-              subject: 'Guru Mata Pelajaran',
-              room: assignedClass ? `Wali Kelas ${assignedClass.nama}` : 'Ruang Guru / Kelas',
+              subject: t.username.includes('budi') || t.username.includes('dewi') ? 'Guru Kejuruan RPL' : 'Guru Kejuruan TKJ',
+              room: assignedClass ? `Wali Kelas ${assignedClass.nama}` : 'Lab Komputer SMKN 1',
             };
           });
           setTeachers(mappedTeachers);
         }
 
-        // 2. Fetch Students from Supabase
+        // 2. Fetch Students (Strictly Demo Classes XII RPL 1 & XII TKJ 1)
         const { data: dbStudents } = await supabase
           .from('profiles')
           .select('id, nama, username, kelas:kelas_id(nama)')
           .eq('role', 'siswa')
+          .in('kelas_id', DEMO_CLASS_IDS)
           .order('nama', { ascending: true });
 
         if (active && dbStudents && dbStudents.length > 0) {
           const mappedStudents: Student[] = dbStudents.map((s, idx) => {
-            const kName = (s.kelas as any)?.nama || 'XII TKJ 1';
+            const kName = (s.kelas as any)?.nama || 'XII RPL 1';
             return {
               id: s.id,
               no: String(idx + 1).padStart(2, '0'),
               nis: s.username.replace(/^s_?/, ''),
               name: s.nama,
               kelas: kName,
-              status: 'Hadir',
+              status: idx % 10 === 8 ? 'Sakit' : idx % 10 === 9 ? 'Izin' : 'Hadir',
             };
           });
           setStudents(mappedStudents);
         }
 
-        // 3. Fetch Schedules from Supabase (Includes XII TKJ 1, XII DKV, and major classes)
+        // 3. Fetch Schedules (Strictly Demo Classes XII RPL 1 & XII TKJ 1)
         const { data: dbJadwal } = await supabase
           .from('jadwal')
           .select(`
             id, jam_mulai, jam_selesai, hari,
-            kelas:kelas_id(nama),
+            kelas:kelas_id!inner(id, nama),
             mapel:mapel_id(nama),
             guru:guru_id(nama)
           `)
-          .order('jam_mulai', { ascending: true })
-          .limit(1000);
+          .in('kelas_id', DEMO_CLASS_IDS)
+          .order('jam_mulai', { ascending: true });
 
         if (active && dbJadwal && dbJadwal.length > 0) {
           const mappedSchedules: ScheduleSlot[] = dbJadwal.map((j, idx) => {
             const jStart = j.jam_mulai ? j.jam_mulai.substring(0, 5) : '07:15';
             const jEnd = j.jam_selesai ? j.jam_selesai.substring(0, 5) : '08:45';
-            const kName = (j.kelas as any)?.nama || 'XII TKJ 1';
+            const kName = (j.kelas as any)?.nama || 'XII RPL 1';
             const mName = (j.mapel as any)?.nama || 'Mata Pelajaran';
-            const gName = (j.guru as any)?.nama || 'Guru Pengampu';
+            const gName = (j.guru as any)?.nama || 'Budi Hartono, S.Kom.';
             return {
               id: j.id || `sch-db-${idx}`,
-              day: (j.hari as any) || 'Selasa',
+              day: (j.hari as any) || 'Kamis',
               jpStart: (idx % 6) + 1,
               jpEnd: (idx % 6) + 2,
               jpLabel: `JP ${(idx % 6) + 1} - ${(idx % 6) + 2}`,
               timeRange: `${jStart} - ${jEnd} WIT`,
               subject: mName,
               teacher: gName,
-              room: 'Lab Komputer SMKN 1',
+              room: kName.includes('RPL') ? 'Lab RPL 2' : 'Lab Komputer 1',
               badgeType: 'normal',
               classTarget: kName,
             };

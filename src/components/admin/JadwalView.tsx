@@ -41,20 +41,21 @@ export const JadwalView: React.FC<JadwalViewProps> = ({
   const [selectedDay, setSelectedDay] = useState<'Senin' | 'Selasa' | 'Rabu' | 'Kamis' | 'Jumat' | 'Sabtu'>('Selasa');
   const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
   const [classList, setClassList] = useState<string[]>([
-    'XII TKJ 1', 'XII TKJ 2', 'XII DKV 1', 'XII DKV 2', 'XII RPL 1', 'XII RPL 2', 'XI TKJ 1', 'X DKV 1'
+    'XII RPL 1', 'XII TKJ 1'
   ]);
   const [classSearch, setClassSearch] = useState('');
   const [classSchedules, setClassSchedules] = useState<ScheduleSlot[]>([]);
   const [isLoadingClassSchedule, setIsLoadingClassSchedule] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync all classes dynamically from Supabase
+  // Sync all demo classes dynamically from Supabase
   useEffect(() => {
     async function loadAllClasses() {
       try {
         const { data } = await supabase
           .from('kelas')
           .select('id, nama')
+          .in('id', ['28da94b0-33e2-4734-8bea-1a0bb740c7ce', 'e88128be-8fc3-4973-8d69-00ef17571626'])
           .order('nama', { ascending: true });
         if (data && data.length > 0) {
           setClassList(data.map((k) => k.nama));
@@ -81,6 +82,7 @@ export const JadwalView: React.FC<JadwalViewProps> = ({
             mapel:mapel_id(nama),
             guru:guru_id(nama)
           `)
+          .in('kelas_id', ['28da94b0-33e2-4734-8bea-1a0bb740c7ce', 'e88128be-8fc3-4973-8d69-00ef17571626'])
           .eq('kelas.nama', selectedClass)
           .order('jam_mulai', { ascending: true });
 
@@ -90,7 +92,7 @@ export const JadwalView: React.FC<JadwalViewProps> = ({
             const jEnd = j.jam_selesai ? j.jam_selesai.substring(0, 5) : '08:45';
             const kName = (j.kelas as any)?.nama || selectedClass;
             const mName = (j.mapel as any)?.nama || 'Mata Pelajaran';
-            const gName = (j.guru as any)?.nama || 'Guru Pengampu';
+            const gName = (j.guru as any)?.nama || 'Budi Hartono, S.Kom.';
             return {
               id: j.id || `sch-${selectedClass}-${idx}`,
               day: (j.hari as any) || 'Selasa',

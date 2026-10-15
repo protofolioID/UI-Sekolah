@@ -93,14 +93,18 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [selectedTeacherForWali, setSelectedTeacherForWali] = useState<Teacher | null>(null);
   const [targetClassForWali, setTargetClassForWali] = useState('XII TKJ 1');
   const [availableClassesList, setAvailableClassesList] = useState<string[]>([
-    'XII TKJ 1', 'XII TKJ 2', 'XII DKV 1', 'XII DKV 2', 'XII RPL 1', 'XII RPL 2', 'XI TKJ 1', 'XI DKV 1', 'X PPLG'
+    'XII RPL 1', 'XII TKJ 1'
   ]);
 
-  // Sync available classes from Supabase for assigning Wali Kelas
+  // Sync available classes from Supabase for assigning Wali Kelas (Strictly Demo Classes)
   useEffect(() => {
     async function loadSchoolClasses() {
       try {
-        const { data } = await supabase.from('kelas').select('id, nama').order('nama');
+        const { data } = await supabase
+          .from('kelas')
+          .select('id, nama')
+          .in('id', ['28da94b0-33e2-4734-8bea-1a0bb740c7ce', 'e88128be-8fc3-4973-8d69-00ef17571626'])
+          .order('nama');
         if (data && data.length > 0) {
           setAvailableClassesList(data.map((c) => c.nama));
         }
@@ -125,30 +129,34 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     setIsExportModalOpen(true);
   };
 
+  const dynamicTotal = students && students.length > 0 ? students.length : 20;
+  const dynamicPresent = students && students.length > 0 ? students.filter(s => s.status === 'Hadir').length : 18;
+  const dynamicSick = students && students.length > 0 ? students.filter(s => s.status === 'Sakit').length : 1;
+  const dynamicPermit = students && students.length > 0 ? students.filter(s => s.status === 'Izin').length : 1;
+  const dynamicAlfa = students && students.length > 0 ? students.filter(s => s.status === 'Alfa' || (s.status as any) === 'Bolos').length : 0;
+  const dynamicRate = dynamicTotal > 0 ? Number(((dynamicPresent / dynamicTotal) * 100).toFixed(1)) : 90.0;
+
   const stats = {
-    totalStudents: 1240,
-    totalClasses: 36,
-    attendanceRate: 96.8,
-    presentToday: 1200,
-    sickToday: 18,
-    permitToday: 12,
-    unexcusedToday: 10,
-    totalTeachers: 78,
+    totalStudents: dynamicTotal,
+    totalClasses: 2,
+    attendanceRate: dynamicRate,
+    presentToday: dynamicPresent,
+    sickToday: dynamicSick,
+    permitToday: dynamicPermit,
+    unexcusedToday: dynamicAlfa,
+    totalTeachers: 4,
   };
 
   const classSummaries = [
-    { id: '1', name: 'XII TKJ 1', hadir: 32, sakit: 1, izin: 1, alfa: 0, status: 'Tervalidasi' },
-    { id: '2', name: 'XII RPL 1', hadir: 34, sakit: 2, izin: 0, alfa: 0, status: 'Tervalidasi' },
-    { id: '3', name: 'XII DKV 1', hadir: 31, sakit: 1, izin: 2, alfa: 1, status: 'Menunggu Validasi' },
-    { id: '4', name: 'XI TKJ 1', hadir: 35, sakit: 0, izin: 1, alfa: 0, status: 'Tervalidasi' },
-    { id: '5', name: 'X PPLG', hadir: 36, sakit: 0, izin: 0, alfa: 0, status: 'Tervalidasi' },
+    { id: '1', name: 'XII RPL 1', hadir: 9, sakit: 1, izin: 0, alfa: 0, status: 'Tervalidasi' },
+    { id: '2', name: 'XII TKJ 1', hadir: 9, sakit: 0, izin: 1, alfa: 0, status: 'Tervalidasi' },
   ];
 
   const auditLogs = [
-    { id: 'log-1', time: '08:50 WIT', user: 'Budi Santoso, S.Kom', action: 'Kunci Presensi JP 1-3 (XII TKJ 1 - 32 Hadir)' },
-    { id: 'log-2', time: '08:15 WIT', user: 'Tata Usaha SMKN 1', action: 'Update Jadwal Rombel XII RPL 2' },
-    { id: 'log-3', time: '07:15 WIT', user: 'Sistem SIAP Server', action: 'Sinkronisasi Otomatis PostgreSQL Supabase (1.000 Jadwal Aktif)' },
-    { id: 'log-4', time: 'Kemarin', user: 'Superadmin IT', action: 'Backup Rutin Database & Snapshot Rombel' },
+    { id: 'log-1', time: '08:50 WIT', user: 'Budi Hartono, S.Kom.', action: 'Kunci Presensi Jam Kejuruan (XII RPL 1 - 9 Hadir)' },
+    { id: 'log-2', time: '08:15 WIT', user: 'Iwan Setiawan, S.Kom.', action: 'Verifikasi Presensi XII TKJ 1' },
+    { id: 'log-3', time: '07:30 WIT', user: 'Tata Usaha SMKN 1', action: 'Siarkan Pengumuman Asesmen Sekolah' },
+    { id: 'log-4', time: '07:00 WIT', user: 'Superadmin SIAP', action: 'Inisialisasi Sistem Presensi Lomba 2026' },
   ];
 
   // ─── QUICK EXCEL ACTIONS ───

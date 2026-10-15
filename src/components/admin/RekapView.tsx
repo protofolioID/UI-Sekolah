@@ -27,14 +27,14 @@ export const RekapView: React.FC<RekapViewProps> = ({
 }) => {
   const isTeacherOrAdmin = userRole === 'guru' || userRole === 'admin' || userRole === 'superadmin';
   const [rekapTab, setRekapTab] = useState<'pribadi' | 'kelas'>(isTeacherOrAdmin ? 'kelas' : 'pribadi');
-  const [selectedClass, setSelectedClass] = useState('XII TKJ 1');
+  const [selectedClass, setSelectedClass] = useState('XII RPL 1');
   const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState('Minggu 2 (8 - 14 Okt)');
   const [selectedMonth, setSelectedMonth] = useState('Oktober 2026');
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-  const classList = ['XII TKJ 1', 'XII DKV 1', 'Semua Siswa'];
+  const classList = ['XII RPL 1', 'XII TKJ 1', 'Semua Siswa'];
   const weekList = [
     'Minggu 1 (1 - 7 Okt)',
     'Minggu 2 (8 - 14 Okt)',
